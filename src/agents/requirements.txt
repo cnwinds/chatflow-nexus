@@ -1,0 +1,15 @@
+# OpenAI Server依赖
+
+# FastAPI相关
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+
+# JWT认证
+PyJWT>=2.8.0
+
+# 密码哈希
+bcrypt>=4.0.0
+
+# 复用现有依赖（通过项目根目录的依赖管理）
+

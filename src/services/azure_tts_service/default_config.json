@@ -1,0 +1,79 @@
+{
+  "service_config": {
+    "default_voice": "zh-CN-XiaoshuangMultilingualNeural",
+    "default_language": "zh-CN",
+    "sample_rate": 16000,
+    "audio_format": "opus",
+    "enable_ssml": true,
+    "enable_emotion": true,
+    "max_text_length": 5000,
+    "timeout": 30,
+    "enable_custom_voice": true,
+    "custom_voice_style": "Prompt"
+  },
+  "azure_config": {
+    "subscription_key": "",
+    "service_region": "eastus",
+    "endpoint": ""
+  },
+  "voice_config": {
+    "available_voices": {
+      "zh-CN": [
+        "zh-CN-YunxiNeural",
+        "zh-CN-YunyangNeural",
+        "zh-CN-XiaoxiaoNeural",
+        "zh-CN-XiaoyiNeural",
+        "zh-CN-YunjianNeural",
+        "zh-CN-XiaoxiaoMultilingualNeural",
+        "zh-CN-XiaoshuangMultilingualNeural",
+        "zh-CN-XiaoshuangNeural"
+      ],
+      "en-US": [
+        "en-US-AriaNeural",
+        "en-US-DavisNeural",
+        "en-US-JennyNeural",
+        "en-US-GuyNeural"
+      ]
+    },
+    "default_emotions": {
+      "happy": "cheerful",
+      "sad": "sad",
+      "angry": "angry",
+      "calm": "calm"
+    },
+    "custom_voice_config": {
+      "default_style": "Prompt"
+    }
+  },
+  "logging": {
+    "level": "INFO"
+  },
+  "optimization": {
+    "enable_connection_pool": true,
+    "enable_connection_prewarming": false,
+    "connection_pool_size": 1
+  },
+  "validation": {
+    "required_keys": [
+      "azure_config.subscription_key",
+      "azure_config.service_region"
+    ],
+    "rules": {
+      "service_config.sample_rate": {
+        "type": "int",
+        "min": 8000,
+        "max": 48000
+      },
+      "service_config.max_text_length": {
+        "type": "int",
+        "min": 1,
+        "max": 10000
+      },
+      "service_config.timeout": {
+        "type": "int",
+        "min": 5,
+        "max": 300
+      }
+    }
+  }
+} 

@@ -1,0 +1,65 @@
+{
+  "service_config": {
+    "default_voice": "zh-CN-XiaoyiNeural",
+    "default_language": "zh-CN",
+    "sample_rate": 16000,
+    "audio_format": "wav",
+    "enable_ssml": true,
+    "max_text_length": 5000,
+    "timeout": 30
+  },
+  "bailian_config": {
+    "api_key": "",
+    "base_url": "",
+    "region": "cn-beijing"
+  },
+  "voice_config": {
+    "model_name": "cosyvoice-v2",
+    "available_voices": {
+      "zh-CN": [
+        "longhuhu",
+        "longwangwang",
+        "longpaopao",
+        "longshanshan",
+        "longniuniu",
+        "longqiang_v2",
+        "longhan_v2"
+      ],
+      "en-US": [
+        "longhuhu",
+        "longwangwang",
+        "longpaopao",
+        "longshanshan",
+        "longniuniu",
+        "longqiang_v2",
+        "longhan_v2"
+      ]
+    }
+  },
+  "logging": {
+    "level": "INFO"
+  },
+  "validation": {
+    "required_keys": [
+      "bailian_config.api_key"
+    ],
+    "rules": {
+      "service_config.sample_rate": {
+        "type": "int",
+        "min": 8000,
+        "max": 48000
+      },
+      "service_config.max_text_length": {
+        "type": "int",
+        "min": 1,
+        "max": 10000
+      },
+      "service_config.timeout": {
+        "type": "int",
+        "min": 5,
+        "max": 300
+      }
+    }
+  }
+}
+

@@ -1,0 +1,61 @@
+{
+  "service_config": {
+    "default_language": "zh-CN",
+    "timeout": 30,
+    "enable_detailed_output": true,
+    "output_format": "detailed",
+    "max_audio_duration": 60
+  },
+  "azure_config": {
+    "subscription_key": "",
+    "service_region": "eastus",
+    "endpoint": "",
+    "enable_logging": true
+  },
+  "recognition_config": {
+    "supported_languages": [
+      "zh-CN",
+      "en-US",
+      "ja-JP",
+      "ko-KR",
+      "fr-FR",
+      "de-DE",
+      "es-ES",
+      "it-IT",
+      "pt-BR",
+      "ru-RU"
+    ],
+    "supported_audio_formats": [
+      "wav",
+      "mp3",
+      "opus",
+      "pcm",
+      "flac",
+      "aac"
+    ],
+    "default_audio_format": "wav"
+  },
+  "logging": {
+    "level": "INFO",
+    "enable_detailed_logs": false,
+    "log_recognition_results": true
+  },
+  "validation": {
+    "required_keys": [
+      "azure_config.subscription_key",
+      "azure_config.service_region"
+    ],
+    "rules": {
+      "service_config.timeout": {
+        "type": "int",
+        "min": 5,
+        "max": 300
+      },
+      "service_config.max_audio_duration": {
+        "type": "int",
+        "min": 1,
+        "max": 600
+      }
+    }
+  }
+} 

@@ -1,0 +1,37 @@
+{
+  "service_config": {
+    "max_search_results": 20,
+    "enable_smart_search": true,
+    "enable_search_suggestions": true,
+    "max_suggestions": 10
+  },
+  "api_config": {
+    "api_key": "",
+    "base_url": "https://api.search.brave.com/res/v1",
+    "timeout": 30,
+    "default_country": "CN",
+    "default_language": "zh"
+  },
+  "logging": {
+    "level": "INFO",
+    "enable_detailed_logs": false,
+    "log_search_queries": true
+  },
+  "validation": {
+    "required_keys": [
+      "api_config.api_key"
+    ],
+    "rules": {
+      "service_config.max_search_results": {
+        "type": "int",
+        "min": 1,
+        "max": 100
+      },
+      "api_config.timeout": {
+        "type": "int",
+        "min": 5,
+        "max": 300
+      }
+    }
+  }
+} 

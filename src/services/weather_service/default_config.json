@@ -1,0 +1,41 @@
+{
+  "service_config": {
+    "default_location": "北京",
+    "temperature_unit": "celsius",
+    "enable_forecast": true,
+    "forecast_days": 7,
+    "enable_air_quality": true,
+    "enable_weather_alerts": true,
+    "cache_duration_minutes": 30,
+    "max_cache_size": 100
+  },
+  "api_config": {
+    "api_key": "",
+    "base_url": "https://api.open-meteo.com/v1",
+    "geocoding_url": "https://geocoding-api.open-meteo.com/v1/search",
+    "timeout": 30,
+    "retry_attempts": 3
+  },
+  "logging": {
+    "level": "INFO",
+    "enable_detailed_logs": false,
+    "log_weather_requests": true
+  },
+  "validation": {
+    "required_keys": [
+      "service_config.default_location"
+    ],
+    "rules": {
+      "service_config.forecast_days": {
+        "type": "int",
+        "min": 1,
+        "max": 14
+      },
+      "api_config.timeout": {
+        "type": "int",
+        "min": 5,
+        "max": 300
+      }
+    }
+  }
+} 

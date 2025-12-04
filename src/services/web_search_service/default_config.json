@@ -1,0 +1,39 @@
+{
+  "service_config": {
+    "default_search_engine": "search_pro",
+    "default_count": 10,
+    "default_content_size": "medium",
+    "default_recency_filter": "noLimit",
+    "timeout": 30
+  },
+  "api_config": {
+    "api_key": ""
+  },
+  "logging": {
+    "level": "INFO",
+    "enable_detailed_logs": false,
+    "log_search_queries": true
+  },
+  "validation": {
+    "required_keys": [
+      "api_config.api_key"
+    ],
+    "rules": {
+      "service_config.default_count": {
+        "type": "int",
+        "min": 1,
+        "max": 50
+      },
+      "service_config.timeout": {
+        "type": "int",
+        "min": 5,
+        "max": 300
+      }
+    }
+  }
+}
+
+
+
+
+

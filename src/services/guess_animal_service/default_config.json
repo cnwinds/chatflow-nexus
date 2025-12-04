@@ -1,0 +1,42 @@
+{
+  "service_config": {
+    "max_guesses": 20,
+    "enable_hints": true,
+    "hint_cost": 2,
+    "enable_scoring": true,
+    "enable_statistics": true,
+    "session_timeout_minutes": 30
+  },
+  "game_config": {
+    "animals_database": "data/animals_database.json",
+    "max_hints": 3,
+    "time_limit": 180
+  },
+  "logging": {
+    "level": "INFO",
+    "enable_detailed_logs": false,
+    "log_game_sessions": true
+  },
+  "validation": {
+    "required_keys": [
+      "game_config.animals_database"
+    ],
+    "rules": {
+      "service_config.max_guesses": {
+        "type": "int",
+        "min": 5,
+        "max": 50
+      },
+      "service_config.hint_cost": {
+        "type": "int",
+        "min": 0,
+        "max": 10
+      },
+      "game_config.max_hints": {
+        "type": "int",
+        "min": 1,
+        "max": 10
+      }
+    }
+  }
+} 

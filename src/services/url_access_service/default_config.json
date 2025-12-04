@@ -1,0 +1,38 @@
+{
+  "service_config": {
+    "timeout": 30,
+    "enable_javascript": false,
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "max_content_length": 10485760,
+    "playwright_browser": "chromium",
+    "playwright_headless": true,
+    "playwright_timeout": 30000
+  },
+  "extract_options": {
+    "extract_images": true,
+    "extract_tables": true,
+    "extract_links": true,
+    "extract_metadata": true,
+    "extract_headings": true
+  },
+  "logging": {
+    "level": "INFO",
+    "enable_detailed_logs": false
+  },
+  "validation": {
+    "required_keys": [],
+    "rules": {
+      "service_config.timeout": {
+        "type": "int",
+        "min": 5,
+        "max": 300
+      },
+      "service_config.max_content_length": {
+        "type": "int",
+        "min": 1024,
+        "max": 104857600
+      }
+    }
+  }
+}
+

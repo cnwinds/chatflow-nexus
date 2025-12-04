@@ -1,0 +1,10 @@
+__pycache__
+
+# Docker runtime directory (contains config, data, logs)
+docker/runtime/
+# Allow downloads directory to be tracked
+!docker/runtime/downloads/
+# Note: services.json contains sensitive API keys and should NOT be tracked
+
+# Record files directory (contains audio recordings)
+record_files/

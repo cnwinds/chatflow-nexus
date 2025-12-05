@@ -161,14 +161,16 @@ class ChatWorkflowManager:
             copilot_mode: 是否启用星宝领航员模式，可选参数
             user_data: 可选的已加载的UserData实例，如果提供则不会重新加载
         """
+        # 导入必要的模块（确保在函数中始终可用）
+        from src.agents.user_data import UserData
+        from src.common.database.manager import get_db_manager
+        
         # 1. 通过 agent_id 加载配置（如果未提供）
         if user_data is not None:
             # 使用提供的 user_data
             self.user_data = user_data
         elif self.user_data is None or not self.user_data._config_loaded:
             # 需要创建并加载 user_data
-            from src.agents.user_data import UserData
-            from src.common.database.manager import get_db_manager
             self.user_data = UserData(get_db_manager())
             if not await self.user_data.load_from_agent_id(self.agent_id):
                 return False

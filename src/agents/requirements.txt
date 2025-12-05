@@ -13,3 +13,26 @@ bcrypt>=4.0.0
 
 # 复用现有依赖（通过项目根目录的依赖管理）
 
+git+https://github.com/cnwinds/stream-workflow.git
+
+# Audio Processing
+opuslib-next>=1.1.4
+silero-vad
+onnxruntime
+pydub
+
+# HTTP/2 Support for LLM Services
+httpx[http2]>=0.25.0
+h2>=4.1.0
+
+# Azure Speech Services
+azure-cognitiveservices-speech>=1.32.0
+
+# Alibaba Cloud DashScope (Bailian TTS)
+dashscope>=1.17.0
+
+# External Services & Tools
+zai-sdk
+chardet
+html2text
+playwright

@@ -14,8 +14,13 @@ from pathlib import Path
 
 from stream_workflow.core import WorkflowEngine
 
+from src.common.logging import get_logger
+
 # 触发自定义节点注册
 from .nodes import *
+
+# 全局 logger
+logger = get_logger(__name__)
 
 
 class DataProxy:
@@ -208,21 +213,16 @@ class ChatWorkflowManager:
         # 7. 文本响应回调（如果提供了回调函数）
         if self.text_response_callback:
             async def text_response_callback_wrapper(chunk):
-                """文本响应回调包装器"""
+                """文本响应回调包装器 - 接收完整句子"""
                 text = chunk.get("text", "")
                 # 处理所有文本，包括空字符串（表示响应完成）
-                from src.common.logging import get_logger
-                logger = get_logger(__name__)
                 logger.debug(f"文本响应回调包装器收到chunk: text长度={len(text) if text else 0}, text={text[:50] if text else 'empty'}")
                 await self.text_response_callback(text)
             
-            # 连接到agent1的response_text_stream获取原始文本流
-            # 注意：虽然workflow中agent1.response_text_stream连接到post_route，
-            # 但外部连接仍然可以接收到消息（workflow支持多个连接）
-            from src.common.logging import get_logger
-            logger = get_logger(__name__)
-            logger.info("注册文本响应回调到agent1.response_text_stream")
-            self.engine.add_external_connection("agent1", "response_text_stream", text_response_callback_wrapper)
+            # 连接到post_route的sentence_stream获取完整句子流
+            # 注意：post_route会将原始文本流分割成完整句子后输出
+            logger.info("注册文本响应回调到post_route.sentence_stream")
+            self.engine.add_external_connection("post_route", "sentence_stream", text_response_callback_wrapper)
             logger.info("文本响应回调已注册")
 
         db_manager = get_db_manager()
@@ -306,8 +306,6 @@ class ChatWorkflowManager:
                 try:
                     agent_id = self.user_data.agent_id
                 except Exception as e:
-                    from src.common.logging import get_logger
-                    logger = get_logger(__name__)
                     logger.debug(f"获取agent_id失败: {e}")
             
             if not agent_id:
@@ -332,8 +330,6 @@ class ChatWorkflowManager:
             )
             
         except Exception as e:
-            from src.common.logging import get_logger
-            logger = get_logger(__name__)
             logger.warning(f"触发会话分析任务失败: {e}")
 
     async def detach(self):
@@ -356,9 +352,10 @@ class ChatWorkflowManager:
         1. 文本输入 → interrupt_controller.recognized_text
         2. interrupt_controller → route.user_text（路由到默认agent）
         3. route → agent1.user_text（默认agent处理）
-        4. agent1.response_text_stream → post_route.text_stream → tts.text_stream
-        5. 文本响应通过 text_response_callback 回调发送给客户端
-        6. TTS状态通过 tts_status_callback 回调发送给客户端
+        4. agent1.response_text_stream → post_route.text_stream
+        5. post_route.sentence_stream → tts.text_stream（完整句子流）
+        6. 文本响应通过 text_response_callback 回调发送给客户端（从 post_route.sentence_stream 获取完整句子）
+        7. TTS状态通过 tts_status_callback 回调发送给客户端
         
         Args:
             text: 用户输入的文本

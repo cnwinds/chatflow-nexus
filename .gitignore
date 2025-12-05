@@ -13,3 +13,4 @@ docker/runtime/
 
 # Record files directory (contains audio recordings)
 record_files/
+error.log

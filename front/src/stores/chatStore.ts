@@ -11,6 +11,8 @@ interface ChatState {
   loadMessages: (sessionId: string) => Promise<Message[]>
   addMessage: (message: Message) => void
   updateMessage: (id: number, updates: Partial<Message>) => void
+  appendToLastAssistantMessage: (content: string, finished?: boolean) => void
+  getOrCreateStreamingAssistantMessage: (sessionId: string) => number
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -69,6 +71,63 @@ export const useChatStore = create<ChatState>((set, get) => ({
         msg.id === id ? { ...msg, ...updates } : msg
       ),
     }))
+  },
+
+  // 追加内容到最后一条 assistant 消息（如果存在且正在流式传输），否则创建新消息
+  appendToLastAssistantMessage: (content, finished = false) => {
+    set((state) => {
+      const messages = [...state.messages]
+      const lastMessage = messages[messages.length - 1]
+      
+      // 如果最后一条消息是 assistant 且正在流式传输，追加内容或更新状态
+      if (lastMessage && lastMessage.role === 'assistant') {
+        const updatedMessage = {
+          ...lastMessage,
+          content: content ? (lastMessage.content || '') + content : lastMessage.content,
+          isStreaming: !finished,
+        }
+        messages[messages.length - 1] = updatedMessage
+        return { messages }
+      } else if (content) {
+        // 否则创建新的 assistant 消息（只有当有内容时才创建）
+        const newMessage: Message = {
+          id: Date.now(),
+          session_id: state.currentSession?.session_id || '',
+          role: 'assistant',
+          content: content,
+          created_at: new Date().toISOString(),
+          isStreaming: !finished,
+        }
+        return { messages: [...messages, newMessage] }
+      }
+      
+      // 如果既没有最后一条 assistant 消息，也没有内容，不做任何操作
+      return { messages }
+    })
+  },
+
+  // 获取或创建一条正在流式传输的 assistant 消息
+  getOrCreateStreamingAssistantMessage: (sessionId) => {
+    const state = useChatStore.getState()
+    const messages = state.messages
+    const lastMessage = messages[messages.length - 1]
+    
+    // 如果最后一条消息是 assistant 且正在流式传输，返回其 ID
+    if (lastMessage && lastMessage.role === 'assistant' && lastMessage.isStreaming) {
+      return lastMessage.id
+    }
+    
+    // 否则创建新的 assistant 消息
+    const newMessage: Message = {
+      id: Date.now(),
+      session_id: sessionId,
+      role: 'assistant',
+      content: '',
+      created_at: new Date().toISOString(),
+      isStreaming: true,
+    }
+    state.addMessage(newMessage)
+    return newMessage.id
   },
 }))
 

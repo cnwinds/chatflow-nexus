@@ -142,6 +142,8 @@ class LoggingManager:
         error_file_path = config.get('error_file_path')
         if not error_file_path:
             error_file_path = self.config_manager.logs_dir / "error.log"
+        else:
+            error_file_path = self.config_manager.logs_dir / error_file_path
         
         # 确保日志目录存在
         log_dir = Path(error_file_path).parent

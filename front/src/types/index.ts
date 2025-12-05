@@ -38,6 +38,7 @@ export interface Message {
   role: 'user' | 'assistant' | 'system'
   content: string
   created_at: string
+  isStreaming?: boolean // 标记消息是否正在流式传输中
 }
 
 export interface ChatCompletionRequest {

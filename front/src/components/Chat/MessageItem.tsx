@@ -7,7 +7,8 @@ interface MessageItemProps {
 
 export default function MessageItem({ message }: MessageItemProps) {
   const isUser = message.role === 'user'
-  const htmlContent = marked(message.content)
+  const isStreaming = message.isStreaming && !isUser
+  const htmlContent = marked(message.content || '')
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -18,12 +19,27 @@ export default function MessageItem({ message }: MessageItemProps) {
             : 'bg-white border border-gray-200 text-gray-900'
         }`}
       >
-        <div
-          className="prose prose-sm max-w-none"
-          dangerouslySetInnerHTML={{ __html: htmlContent }}
-        />
-        <div className={`text-xs mt-2 ${isUser ? 'text-indigo-100' : 'text-gray-500'}`}>
-          {new Date(message.created_at).toLocaleTimeString()}
+        <div className="prose prose-sm max-w-none">
+          <div
+            className="flex-1"
+            dangerouslySetInnerHTML={{ __html: htmlContent }}
+          />
+          {isStreaming && (
+            <span className="inline-block w-2 h-4 bg-gray-600 ml-1 animate-pulse" />
+          )}
+        </div>
+        <div className={`text-xs mt-2 flex items-center ${isUser ? 'text-indigo-100' : 'text-gray-500'}`}>
+          <span>{new Date(message.created_at).toLocaleTimeString()}</span>
+          {isStreaming && (
+            <span className="ml-2 text-gray-400 flex items-center gap-1">
+              <span>正在输入</span>
+              <span className="flex gap-0.5">
+                <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              </span>
+            </span>
+          )}
         </div>
       </div>
     </div>

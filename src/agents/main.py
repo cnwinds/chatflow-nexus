@@ -28,7 +28,7 @@ from src.common.logging.manager import initialize_logging
 from src.common.logging.http_request_response_log import fastapi_log_request_response_middleware
 
 # 导入API路由
-from src.agents.api import auth, agents, sessions, chat
+from src.agents.api import auth, agents, sessions, chat, websocket
 from src.agents.utcp_tools import get_global_utcp_manager
 
 # 全局管理器实例
@@ -340,7 +340,9 @@ async def generic_exception_handler(request: Request, exc: Exception):
 app.include_router(auth.router, prefix="/auth", tags=["认证"])
 app.include_router(agents.router, prefix="/agents", tags=["Agent管理"])
 app.include_router(sessions.router, prefix="/sessions", tags=["会话管理"])
-app.include_router(chat.router, prefix="/v1", tags=["OpenAI兼容API"])
+app.include_router(websocket.router, tags=["WebSocket"])
+# HTTP接口已废弃，保留仅用于兼容性
+app.include_router(chat.router, prefix="/v1", tags=["OpenAI兼容API（已废弃）"])
 
 # 健康检查路由
 @app.get("/", tags=["健康检查"])

@@ -1,7 +1,7 @@
 """
 聊天记录数据库操作
 """
-import logging
+from src.common.logging import get_logger
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timedelta
 
@@ -12,9 +12,9 @@ from .utils import format_time
 class ChatRecordDatabase:
     """聊天记录数据库操作类"""
     
-    def __init__(self, db_manager: DatabaseManager, logger: logging.Logger = None):
+    def __init__(self, db_manager: DatabaseManager):
         self.db_manager = db_manager
-        self.logger = logger or logging.getLogger(__name__)
+        self.logger = get_logger(__name__)
     
     async def save_chat_record(
         self,

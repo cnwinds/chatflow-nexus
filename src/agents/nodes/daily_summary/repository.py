@@ -5,14 +5,14 @@
 """
 
 import json
-import logging
+from src.common.logging import get_logger
 from typing import Dict, Any, List, Optional
 from datetime import datetime, date
 
 from src.common.database.manager import get_db_manager
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 DAILY_SUMMARY = "daily"

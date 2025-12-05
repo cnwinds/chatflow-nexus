@@ -4,7 +4,7 @@
 提供统一的日志配置、格式化和输出功能。
 """
 
-from .manager import LoggingManager, get_logging_manager, initialize_logging, is_logging_ready
+from .manager import LoggingManager, get_logging_manager, initialize_logging, is_logging_ready, get_logger
 from .formatters import ColoredFormatter, JsonFormatter
 from .filters import SensitiveDataFilter, PerformanceFilter
 
@@ -16,5 +16,6 @@ __all__ = [
     'PerformanceFilter',
     'get_logging_manager',
     'initialize_logging',
-    'is_logging_ready'
+    'is_logging_ready',
+    'get_logger'
 ] 

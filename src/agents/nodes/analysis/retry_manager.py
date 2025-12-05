@@ -6,12 +6,12 @@
 
 import asyncio
 import random
-import logging
+from src.common.logging import get_logger
 from typing import Optional, Callable, Any
 from dataclasses import dataclass
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

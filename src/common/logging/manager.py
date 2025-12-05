@@ -370,4 +370,29 @@ def is_logging_ready() -> bool:
         bool: 是否已初始化
     """
     global _logging_manager
-    return _logging_manager is not None 
+    return _logging_manager is not None
+
+
+def get_logger(name: str = None) -> logging.Logger:
+    """获取日志记录器（便捷函数）
+    
+    这是一个便捷函数，用于获取日志记录器。如果日志管理器已初始化，
+    则使用日志管理器获取；否则回退到标准logging模块。
+    
+    Args:
+        name: 日志记录器名称，默认为None（使用调用模块的名称）
+        
+    Returns:
+        logging.Logger: 日志记录器实例
+    """
+    if name is None:
+        import inspect
+        frame = inspect.currentframe().f_back
+        name = frame.f_globals.get('__name__', 'root')
+    
+    try:
+        logging_manager = get_logging_manager()
+        return logging_manager.get_logger(name)
+    except RuntimeError:
+        # 如果日志管理器未初始化，回退到标准logging
+        return logging.getLogger(name) 

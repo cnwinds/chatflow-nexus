@@ -7,7 +7,7 @@ import { sessionsApi } from '../../services/sessions'
 export default function ChatInput() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const { currentSession, addMessage, setCurrentSession, loadMessages } = useChatStore()
+  const { currentSession, addMessage, setCurrentSession, messages, updateMessage } = useChatStore()
   const { currentAgent } = useAgentStore()
 
   const handleSend = async () => {
@@ -43,15 +43,41 @@ export default function ChatInput() {
 
       // 调用API
       let assistantMessage = ''
+      const assistantMessageId = Date.now() + 1
+      
+      // 先创建一条空的assistant消息
+      addMessage({
+        id: assistantMessageId,
+        session_id: session.session_id,
+        role: 'assistant',
+        content: '',
+        created_at: new Date().toISOString(),
+      })
+      
+      // 使用当前消息列表构建请求
+      // 由于React状态更新是异步的，需要确保最后一条用户消息是刚输入的message
+      // 获取当前会话的所有消息（排除空的assistant消息）
+      const sessionMessages = messages
+        .filter(m => m.session_id === session.session_id && (m.role !== 'assistant' || m.content))
+        .map(m => ({
+          role: m.role,
+          content: m.content,
+        }))
+      
+      // 确保最后一条用户消息是刚输入的message
+      // 移除最后一条用户消息（如果存在），然后添加正确的消息
+      while (sessionMessages.length > 0 && sessionMessages[sessionMessages.length - 1].role === 'user') {
+        sessionMessages.pop()
+      }
+      // 添加正确的用户消息
+      sessionMessages.push({
+        role: 'user',
+        content: message,
+      })
+      
       const request = {
         model: `agent-${agentId}`,
-        messages: [
-          ...(await loadMessages(session.session_id)).map(m => ({
-            role: m.role,
-            content: m.content,
-          })),
-          { role: 'user' as const, content: message },
-        ],
+        messages: sessionMessages,
         stream: true,
         session_id: session.session_id,
       }
@@ -61,13 +87,9 @@ export default function ChatInput() {
         const content = chunk.choices[0]?.delta?.content
         if (content) {
           assistantMessage += content
-          // 更新最后一条消息
-          addMessage({
-            id: Date.now() + 1,
-            session_id: session.session_id,
-            role: 'assistant',
+          // 更新同一条消息的内容
+          updateMessage(assistantMessageId, {
             content: assistantMessage,
-            created_at: new Date().toISOString(),
           })
         }
       }

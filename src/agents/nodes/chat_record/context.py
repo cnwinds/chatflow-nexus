@@ -1,16 +1,16 @@
 """
 聊天记录上下文管理
 """
-import logging
+from src.common.logging import get_logger
 from typing import Any, Dict, List, Optional
 
 
 class ChatRecordContext:
     """聊天记录上下文管理类"""
     
-    def __init__(self, logger: logging.Logger = None):
+    def __init__(self):
         self._chat_context: List[Dict[str, Any]] = []
-        self.logger = logger or logging.getLogger(__name__)
+        self.logger = get_logger(__name__)
     
     def add_chat_context(self, role: str, content: str, **kwargs):
         """添加聊天上下文"""

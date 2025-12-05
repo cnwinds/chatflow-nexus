@@ -19,7 +19,6 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 import asyncio
-import logging
 import time
 import json
 import jinja2
@@ -33,6 +32,7 @@ if str(_project_root) not in sys.path:
 from stream_workflow.core import Node, ParameterSchema, StreamChunk, register_node
 from stream_workflow.core.parameter import FieldSchema
 from src.agents.utcp_tools import call_utcp_tool
+from src.common.logging import get_logger
 
 
 @register_node("interrupt_controller_node")
@@ -94,7 +94,7 @@ class InterruptControllerNode(Node):
     }
 
     async def run(self, context):
-        self._logger = logging.getLogger(__name__)
+        self._logger = get_logger(__name__)
 
         # 从全局上下文获取 agent_id（用于日志标识）
         self._agent_id = context.get_global_var("agent_id") or "unknown"

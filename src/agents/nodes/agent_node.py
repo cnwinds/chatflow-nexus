@@ -16,8 +16,6 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 import time
 import json
-import logging
-
 # 确保可以导入 src 模块（当从外部项目加载时）
 _file_path = Path(__file__).resolve()
 _project_root = _file_path.parent.parent.parent.parent
@@ -29,9 +27,10 @@ from stream_workflow.core import Node, ParameterSchema, StreamChunk, register_no
 
 from src.common.utils.llm_chat import LLMChat
 from src.common.utils.date_utils import get_current_time, get_lunar_date_str
+from src.common.logging import get_logger
 from datetime import datetime
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @register_node("agent_node")
@@ -210,10 +209,6 @@ class AgentNode(Node):
         char_prompt = self.user_data.get_config("profile.character.prompt") or ""
         long_term_memory = self.user_data.get_memory("chat.long_term_memory") or None
         
-        # 获取孩子信息
-        child_name = self.user_data.get_config("profile.child_info.name") or ""
-        child_age = self.user_data.get_config("profile.child_info._age") or 5.0
-        child_birthday = self.user_data.get_config("profile.child_info.birth_date") or ""
         
         # 获取模式指示器
         # 判断低置信度模式（根据置信度阈值判断）
@@ -256,9 +251,6 @@ class AgentNode(Node):
             "current_time": get_current_time(now),  # 公历时间
             "lunar_date": get_lunar_date_str(now),  # 农历日期（可选）
             "weekday": time.strftime("%A"),
-            "child_name": child_name,
-            "child_age": child_age,
-            "child_birthday": child_birthday,
             "mode_indicator": mode_indicator,
             "voice_name": voice_name,
 

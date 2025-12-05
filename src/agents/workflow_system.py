@@ -5,7 +5,6 @@
 """
 
 import asyncio
-import logging
 import yaml
 from pathlib import Path
 from typing import Optional
@@ -13,12 +12,13 @@ from typing import Optional
 from stream_workflow.core import WorkflowEngine
 from src.common.config import get_config_manager
 from src.common.config.constants import ConfigPaths
+from src.common.logging import get_logger
 
 # 触发自定义节点注册（必须在模块级别）
 from .nodes import *  # noqa: F401, F403
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class SystemWorkflowManager:
@@ -32,7 +32,7 @@ class SystemWorkflowManager:
         self.engine: Optional[WorkflowEngine] = None
         self.context = None
         self._running = False
-        self._logger = logging.getLogger(__name__)
+        self._logger = get_logger(__name__)
     
     @classmethod
     async def get_instance(cls) -> 'SystemWorkflowManager':

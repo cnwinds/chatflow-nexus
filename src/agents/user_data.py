@@ -7,7 +7,7 @@ import json
 from typing import Dict, Any, Optional
 from dataclasses import dataclass, field
 from datetime import datetime, date
-import logging
+from src.common.logging import get_logger
 
 
 @dataclass
@@ -43,7 +43,7 @@ class UserData:
     
     def __init__(self, db_manager=None):
         self.db_manager = db_manager
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = get_logger(self.__class__.__name__)
         
         # 用户信息
         self.user_id: Optional[int] = None
@@ -172,11 +172,6 @@ class UserData:
             self._config_loaded = True
             self._user_config_modified = False
             self._user_memory_modified = False
-            
-            # 计算孩子年龄
-            birth_date = self.get_config("profile.child_info.birth_date")
-            if birth_date:
-                self.set_config("profile.child_info._age", self.calculate_age_from_birth_date(birth_date))
             
             # 加载克隆声音信息
             await self._load_clone_voices()

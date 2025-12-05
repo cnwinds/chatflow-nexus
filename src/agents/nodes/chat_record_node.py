@@ -7,7 +7,7 @@
 """
 import sys
 import asyncio
-import logging
+from src.common.logging import get_logger
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from datetime import datetime
@@ -78,7 +78,7 @@ class ChatRecordNode(Node):
 
     async def initialize(self, context):
         """初始化节点"""
-        self._logger = logging.getLogger(__name__)
+        self._logger = get_logger(__name__)
         
         # 注册到全局上下文
         context.set_global_var("chat_record_node", self)
@@ -98,7 +98,7 @@ class ChatRecordNode(Node):
             raise Exception("数据库管理器未初始化，请确保在程序启动时已初始化数据库")
         
         # 初始化工具类
-        self.db = ChatRecordDatabase(db_manager, self._logger)
+        self.db = ChatRecordDatabase(db_manager)
         self.compression = ChatRecordCompression(
             self.engine,
             self.ai_providers,
@@ -106,8 +106,7 @@ class ChatRecordNode(Node):
             self.compress_user_prompt,
             self.compress_token_threshold,
             self.keep_last_rounds,
-            self.memory_extract_max_length,
-            self._logger
+            self.memory_extract_max_length
         )
         self.memory = ChatRecordMemory(
             self.user_data,
@@ -115,10 +114,9 @@ class ChatRecordNode(Node):
             self.ai_providers,
             self.memory_extract_system_prompt,
             self.memory_extract_user_prompt,
-            self.memory_extract_max_length,
-            self._logger
+            self.memory_extract_max_length
         )
-        self.context_manager = ChatRecordContext(self._logger)
+        self.context_manager = ChatRecordContext()
         
         # 初始化状态
         self._chat_history: List[Dict[str, Any]] = []
@@ -177,7 +175,7 @@ class ChatRecordNode(Node):
             
             # 合并和验证
             before_count = len(self._chat_history)
-            self._chat_history = merge_consecutive_messages(self._chat_history, self._logger)
+            self._chat_history = merge_consecutive_messages(self._chat_history)
             after_count = len(self._chat_history)
             
             if before_count != after_count:
@@ -344,7 +342,7 @@ class ChatRecordNode(Node):
             self._chat_history = [compressed_msg] + to_keep
             
             # 8. 同步和提取记忆
-            self._chat_history = merge_consecutive_messages(self._chat_history, self._logger)
+            self._chat_history = merge_consecutive_messages(self._chat_history)
             self.context_manager.sync_history_to_context(self._chat_history)
             await self.memory.extract_memory(uncompressed)
             

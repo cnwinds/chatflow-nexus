@@ -7,7 +7,9 @@ import uuid
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from src.common.database.manager import DatabaseManager
-from loguru import logger
+from src.common.logging import get_logger
+
+logger = get_logger(__name__)
 
 class SessionService:
     """会话服务类"""

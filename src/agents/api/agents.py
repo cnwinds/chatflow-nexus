@@ -4,9 +4,11 @@
 """Agent管理API路由"""
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from loguru import logger
+from src.common.logging import get_logger
 from typing import List, Optional
 import json
+
+logger = get_logger(__name__)
 
 from src.agents.models.requests import CreateAgentRequest, UpdateAgentRequest
 from src.agents.models.responses import BaseResponse, AgentInfo

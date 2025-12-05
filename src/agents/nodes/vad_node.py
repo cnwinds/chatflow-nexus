@@ -13,7 +13,6 @@ VAD 节点
 import sys
 from pathlib import Path
 import asyncio
-import logging
 from typing import Any, Dict, Optional
 import opuslib_next
 
@@ -28,6 +27,7 @@ from stream_workflow.core.parameter import FieldSchema
 
 # 使用新的 Silero VAD 实现
 from src.common.utils.audio.silero_vad import SileroVAD, SileroVadConfig
+from src.common.logging import get_logger
 
 
 @register_node("vad_node")
@@ -101,7 +101,7 @@ class VADNode(Node):
     async def run(self, context):
         self.context = context
         self.user_data = context.get_global_var("user_data")
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__)
 
         self.vad_cfg = self._load_config(context)
         

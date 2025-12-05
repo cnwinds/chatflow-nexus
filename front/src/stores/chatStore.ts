@@ -10,6 +10,7 @@ interface ChatState {
   loadSessions: () => Promise<void>
   loadMessages: (sessionId: string) => Promise<Message[]>
   addMessage: (message: Message) => void
+  updateMessage: (id: number, updates: Partial<Message>) => void
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -59,6 +60,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
   addMessage: (message) => {
     set((state) => ({
       messages: [...state.messages, message],
+    }))
+  },
+
+  updateMessage: (id, updates) => {
+    set((state) => ({
+      messages: state.messages.map((msg) =>
+        msg.id === id ? { ...msg, ...updates } : msg
+      ),
     }))
   },
 }))

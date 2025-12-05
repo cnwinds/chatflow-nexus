@@ -5,6 +5,9 @@
 
 from typing import List, Dict, Any, Optional
 from src.common.database.manager import DatabaseManager
+from src.common.logging import get_logger
+
+logger = get_logger(__name__)
 
 class AgentService:
     """Agent服务类"""
@@ -56,11 +59,9 @@ class AgentService:
                     {"template_id": template_id}
                 )
                 if template_check:
-                    from loguru import logger
                     logger.warning(f"模板ID {template_id} 存在但状态为 {template_check.get('status')}，无法使用")
                     return None
                 else:
-                    from loguru import logger
                     logger.warning(f"模板ID {template_id} 不存在")
                     return None
             
@@ -123,7 +124,6 @@ class AgentService:
             return await self.get_agent_detail(db, agent_id, user_id)
             
         except Exception as e:
-            from loguru import logger
             logger.error(f"创建agent失败: user_id={user_id}, template_id={template_id}, 错误: {str(e)}")
             return None
     

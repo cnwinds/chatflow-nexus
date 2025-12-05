@@ -2,7 +2,7 @@
 聊天记录长期记忆管理
 """
 import json
-import logging
+from src.common.logging import get_logger
 from typing import Any, Dict, List
 
 from src.agents.utcp_tools import call_utcp_tool
@@ -18,8 +18,7 @@ class ChatRecordMemory:
         ai_providers: Dict[str, Any],
         memory_extract_system_prompt: str,
         memory_extract_user_prompt: str,
-        memory_extract_max_length: int,
-        logger: logging.Logger = None
+        memory_extract_max_length: int
     ):
         self.user_data = user_data
         self.engine = engine
@@ -27,7 +26,7 @@ class ChatRecordMemory:
         self.memory_extract_system_prompt = memory_extract_system_prompt
         self.memory_extract_user_prompt = memory_extract_user_prompt
         self.memory_extract_max_length = memory_extract_max_length
-        self.logger = logger or logging.getLogger(__name__)
+        self.logger = get_logger(__name__)
     
     async def extract_memory(self, messages: List[Dict[str, Any]]):
         """提取长期记忆"""

@@ -1,7 +1,7 @@
 """
 聊天记录工具方法
 """
-import logging
+from src.common.logging import get_logger
 from typing import Any, Dict, List
 from datetime import datetime
 
@@ -33,7 +33,7 @@ def create_message(role: str, content: str, emotion: str = "", audio_path: str =
     return message
 
 
-def merge_consecutive_messages(chat_history: List[Dict[str, Any]], logger: logging.Logger = None) -> List[Dict[str, Any]]:
+def merge_consecutive_messages(chat_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """合并连续相同角色的消息"""
     if not chat_history:
         return []
@@ -62,14 +62,13 @@ def merge_consecutive_messages(chat_history: List[Dict[str, Any]], logger: loggi
         i = j
     
     # 验证交替模式
-    verify_alternation(merged, logger)
+    verify_alternation(merged)
     return merged
 
 
-def verify_alternation(history: List[Dict[str, Any]], logger: logging.Logger = None):
+def verify_alternation(history: List[Dict[str, Any]]):
     """验证消息交替模式"""
-    if logger is None:
-        logger = logging.getLogger(__name__)
+    logger = get_logger(__name__)
     
     prev_role = None
     for i, msg in enumerate(history):

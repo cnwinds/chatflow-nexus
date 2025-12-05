@@ -255,17 +255,11 @@ class OpeningAgentNode(Node):
         recent_chats = history.get("recent_chats", [])
         total_count = history.get("total_count", 0)
 
-        child_name = ""
-        child_age = 5.0
-        child_birthday = ""
         long_term_memory = None
         guidance_topic = None
         guidance_strategy = None
 
         if self.user_data:
-            child_name = self.user_data.get_config("profile.child_info.name") or ""
-            child_age = self.user_data.get_config("profile.child_info._age") or 5.0
-            child_birthday = self.user_data.get_config("profile.child_info.birth_date") or ""
             long_term_memory = self.user_data.get_memory("chat.long_term_memory") or None
             guidance_topic = self.user_data.get_config("guidance.topic") or None
             guidance_strategy = self.user_data.get_config("guidance.strategy") or None
@@ -291,9 +285,6 @@ class OpeningAgentNode(Node):
             "weekday": weekday,
             "prompt": char_prompt,
             "character_prompt": char_prompt,
-            "child_name": child_name,
-            "child_age": child_age,
-            "child_birthday": child_birthday,
             "long_term_memory": long_term_memory,
             "guidance_topic": guidance_topic,
             "guidance_strategy": guidance_strategy,

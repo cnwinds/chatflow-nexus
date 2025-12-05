@@ -5,7 +5,7 @@
 """
 
 import re
-import logging
+from src.common.logging import get_logger
 from typing import Optional, Tuple
 
 
@@ -27,7 +27,7 @@ class EmotionParser:
     DEFAULT_EMOTION = 'chat'
     
     def __init__(self):
-        self._logger = logging.getLogger(__name__)
+        self._logger = get_logger(__name__)
         self._current_emotion = self.DEFAULT_EMOTION  # 当前情绪状态
         
         # 构建emoji正则表达式模式

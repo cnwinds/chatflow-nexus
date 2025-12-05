@@ -5,7 +5,7 @@
 """
 
 import json
-import logging
+from src.common.logging import get_logger
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 
@@ -16,7 +16,7 @@ from src.common.utils.llm_chat import LLMChat
 from src.common.utils import parse_json_from_llm_response
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class SessionAnalyzer:

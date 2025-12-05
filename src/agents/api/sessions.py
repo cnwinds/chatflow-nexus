@@ -4,8 +4,10 @@
 """会话管理API路由"""
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from loguru import logger
+from src.common.logging import get_logger
 from typing import List
+
+logger = get_logger(__name__)
 
 from src.agents.models.requests import CreateSessionRequest
 from src.agents.models.responses import BaseResponse, SessionInfo, MessageInfo

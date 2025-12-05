@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 import asyncio
 import re
-import logging
 
 # 确保可以导入 src 模块（当从外部项目加载时）
 _file_path = Path(__file__).resolve()
@@ -29,6 +28,7 @@ from stream_workflow.core.parameter import FieldSchema
 
 from src.agents.utcp_tools import call_utcp_tool_stream, call_utcp_tool
 from src.agents.nodes.tts.emotion_parser import EmotionParser
+from src.common.logging import get_logger
 
 
 @register_node("tts_node")
@@ -63,7 +63,7 @@ class TTSNode(Node):
 
     async def run(self, context):
         self._user_data = context.get_global_var("user_data")
-        self._logger = logging.getLogger(__name__)
+        self._logger = get_logger(__name__)
         self._session_id = context.get_global_var("session_id")
 
         self._tts_cfg = self._load_config(context)
@@ -272,6 +272,11 @@ class TTSNode(Node):
         return voice_ids.get(voice_name, original_voice)
 
     async def on_chunk_received(self, param_name: str, chunk: StreamChunk):
+        # 检查是否已初始化
+        if not hasattr(self, '_audio_send') or self._audio_send is None:
+            self._logger.warning("TTS节点尚未初始化，忽略消息")
+            return
+            
         if param_name == "text_stream":
             sentence = (chunk.data or {}).get("text", "")
             if sentence:
@@ -279,16 +284,23 @@ class TTSNode(Node):
             elif sentence == "":  # 空文本表示结束
                 # 所有句子处理完成
                 await self._audio_send.tts_stop()
-                self._emotion_parser.reset_emotion()
-                self._is_tts_active = False
+                if hasattr(self, '_emotion_parser'):
+                    self._emotion_parser.reset_emotion()
+                if hasattr(self, '_is_tts_active'):
+                    self._is_tts_active = False
         elif param_name == "interrupt":
             # 立即中断当前播放并清空所有缓存
             await self._handle_interrupt()
     
     async def _process_sentence(self, text: str):
         """处理单个句子"""
+        # 检查是否已初始化
+        if not hasattr(self, '_audio_send') or self._audio_send is None:
+            self._logger.warning("TTS节点尚未初始化，无法处理句子")
+            return
+            
         # 1. 检查是否需要发送TTS开始消息
-        if not self._is_tts_active:
+        if not hasattr(self, '_is_tts_active') or not self._is_tts_active:
             await self._audio_send.tts_start()
             self._is_tts_active = True
 
@@ -354,7 +366,13 @@ class TTSNode(Node):
         """流式TTS合成并发送到AudioSend，返回音频输出大小（字节数）"""
         import asyncio
         
-        self._repackager.reset()
+        # 检查是否已初始化
+        if not hasattr(self, '_audio_send') or self._audio_send is None:
+            self._logger.warning("TTS节点尚未初始化，无法进行流式合成")
+            return 0
+            
+        if hasattr(self, '_repackager'):
+            self._repackager.reset()
         
         # 仅在克隆角色时传入对应的 voice_params（来自 DB 缓存 clone_voice._voice_params）
         voice_params = {}
@@ -417,6 +435,11 @@ class TTSNode(Node):
     
     async def _direct_synthesis_to_audio_send(self, text: str, voice_id: str, emotion: str, role_hint: str = None) -> int:
         """非流式TTS合成并发送到AudioSend，返回音频输出大小（字节数）"""
+        # 检查是否已初始化
+        if not hasattr(self, '_audio_send') or self._audio_send is None:
+            self._logger.warning("TTS节点尚未初始化，无法进行直接合成")
+            return 0
+            
         # 仅在克隆角色时传入对应的 voice_params（来自 DB 缓存 clone_voice._voice_params）
         voice_params = {}
         try:
@@ -465,7 +488,8 @@ class TTSNode(Node):
                 return await self._convert_pcm_to_opus_60ms(audio_data)
                 
         except Exception as e:
-            self.context.log_error(f"音频转换失败: {e}")
+            if hasattr(self, '_logger'):
+                self._logger.error(f"音频转换失败: {e}")
             # 降级处理：直接使用audio_codec编码
             return await self._convert_pcm_to_opus_60ms(audio_data)
 
@@ -528,7 +552,8 @@ class TTSNode(Node):
             return opus_frames
             
         except Exception as e:
-            self.context.log_error(f"PCM转Opus失败: {e}")
+            if hasattr(self, '_logger'):
+                self._logger.error(f"PCM转Opus失败: {e}")
             # 最后的降级处理：返回原始数据
             return [{
                 "data": pcm_data,
@@ -537,13 +562,21 @@ class TTSNode(Node):
     
     async def _handle_interrupt(self):
         """处理中断：立即停止播放，清空缓存，并发送tts_stop。"""
+        # 检查是否已初始化
+        if not hasattr(self, '_audio_send') or self._audio_send is None:
+            self._logger.warning("TTS节点尚未初始化，无法处理中断")
+            return
+            
         try:
             await self._audio_send.interrupt()
-            self._repackager.reset()
+            if hasattr(self, '_repackager'):
+                self._repackager.reset()
         finally:
             # 重置本地状态
-            self._emotion_parser.reset_emotion()
-            self._is_tts_active = False
+            if hasattr(self, '_emotion_parser'):
+                self._emotion_parser.reset_emotion()
+            if hasattr(self, '_is_tts_active'):
+                self._is_tts_active = False
 
 
 class AudioSend:
@@ -556,7 +589,7 @@ class AudioSend:
         self.buffer_time = buffer_time
         
         # 初始化日志记录器
-        self._logger = logging.getLogger(__name__)
+        self._logger = get_logger(__name__)
         
         # 音频队列和状态
         self._audio_queue = None

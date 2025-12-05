@@ -210,10 +210,20 @@ class ChatWorkflowManager:
             async def text_response_callback_wrapper(chunk):
                 """文本响应回调包装器"""
                 text = chunk.get("text", "")
-                if text:  # 只处理非空文本
-                    await self.text_response_callback(text)
-            # 连接到默认agent的文本响应流
+                # 处理所有文本，包括空字符串（表示响应完成）
+                from src.common.logging import get_logger
+                logger = get_logger(__name__)
+                logger.debug(f"文本响应回调包装器收到chunk: text长度={len(text) if text else 0}, text={text[:50] if text else 'empty'}")
+                await self.text_response_callback(text)
+            
+            # 连接到agent1的response_text_stream获取原始文本流
+            # 注意：虽然workflow中agent1.response_text_stream连接到post_route，
+            # 但外部连接仍然可以接收到消息（workflow支持多个连接）
+            from src.common.logging import get_logger
+            logger = get_logger(__name__)
+            logger.info("注册文本响应回调到agent1.response_text_stream")
             self.engine.add_external_connection("agent1", "response_text_stream", text_response_callback_wrapper)
+            logger.info("文本响应回调已注册")
 
         db_manager = get_db_manager()
 
@@ -296,8 +306,8 @@ class ChatWorkflowManager:
                 try:
                     agent_id = self.user_data.agent_id
                 except Exception as e:
-                    import logging
-                    logger = logging.getLogger(__name__)
+                    from src.common.logging import get_logger
+                    logger = get_logger(__name__)
                     logger.debug(f"获取agent_id失败: {e}")
             
             if not agent_id:
@@ -322,8 +332,8 @@ class ChatWorkflowManager:
             )
             
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
+            from src.common.logging import get_logger
+            logger = get_logger(__name__)
             logger.warning(f"触发会话分析任务失败: {e}")
 
     async def detach(self):

@@ -9,8 +9,10 @@ import asyncio
 import json
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from fastapi.responses import StreamingResponse
-from loguru import logger
+from src.common.logging import get_logger
 from typing import Optional, AsyncGenerator, Dict, Any
+
+logger = get_logger(__name__)
 
 from src.agents.models.requests import ChatCompletionRequest
 from src.agents.models.responses import BaseResponse, ChatCompletionResponse, ChatCompletionChunk
@@ -28,7 +30,11 @@ async def chat_completions(
     authorization: Optional[str] = Header(None),
     db = Depends(get_db_manager)
 ):
-    """OpenAI兼容的聊天完成接口"""
+    """
+    OpenAI兼容的聊天完成接口（已废弃）
+    
+    注意：此接口已废弃，请使用WebSocket接口 /ws/chat
+    """
     try:
         # 解析agent_id
         if not request.model.startswith("agent-"):

@@ -15,7 +15,7 @@
 import sys
 from pathlib import Path
 import asyncio
-import logging
+from src.common.logging import get_logger
 from typing import Any, Dict, Optional
 
 # 确保可以导入 src 模块（当从外部项目加载时）
@@ -32,7 +32,7 @@ from src.agents.nodes.analysis.repository import SessionAnalysisRepository
 from src.agents.nodes.analysis.retry_manager import RetryManager, RetryConfig
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @register_node("analysis_node")
@@ -75,7 +75,7 @@ class AnalysisNode(Node):
     async def initialize(self, context):
         """初始化节点"""
         self.context = context
-        self._logger = logging.getLogger(__name__)
+        self._logger = get_logger(__name__)
         
         # 从全局上下文获取engine
         self.engine = context.get_global_var("engine")

@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 import asyncio
 import json
-import logging
+from src.common.logging import get_logger
 from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime, date
 
@@ -26,7 +26,7 @@ from src.agents.utcp_tools import call_utcp_tool
 from src.common.utils import parse_json_from_llm_response
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @register_node('daily_summary')
@@ -74,7 +74,7 @@ class DailySummaryNode(Node):
     async def run(self, context):
         """节点执行逻辑"""
         self.context = context
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__)
         
         # 从全局上下文获取配置
         self.engine = context.get_global_var("engine")

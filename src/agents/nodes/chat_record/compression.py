@@ -1,7 +1,7 @@
 """
 聊天记录压缩逻辑
 """
-import logging
+from src.common.logging import get_logger
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.agents.utcp_tools import call_utcp_tool
@@ -20,8 +20,7 @@ class ChatRecordCompression:
         compress_user_prompt: str,
         compress_token_threshold: int,
         keep_last_rounds: int,
-        memory_max_length: int = 4000,
-        logger: logging.Logger = None
+        memory_max_length: int = 4000
     ):
         self.engine = engine
         self.ai_providers = ai_providers
@@ -30,7 +29,7 @@ class ChatRecordCompression:
         self.compress_token_threshold = compress_token_threshold
         self.keep_last_rounds = keep_last_rounds
         self.memory_max_length = memory_max_length
-        self.logger = logger or logging.getLogger(__name__)
+        self.logger = get_logger(__name__)
         self._is_compressing = False
     
     def check_and_compress(self, chat_history: List[Dict[str, Any]]) -> bool:

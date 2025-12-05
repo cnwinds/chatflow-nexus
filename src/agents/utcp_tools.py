@@ -6,18 +6,18 @@
 """
 
 import asyncio
-import logging
 import time
 from typing import Optional, Dict, Any, List
 from src.utcp.utcp import UTCPManager
 from src.common.config import get_config_manager
+from src.common.logging import get_logger
 
 # 全局UTCP管理器实例
 _global_utcp_manager: Optional[UTCPManager] = None
 _initialization_lock = asyncio.Lock()
 _initialization_complete = False
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 async def get_global_utcp_manager() -> UTCPManager:

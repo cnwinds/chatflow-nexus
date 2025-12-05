@@ -42,6 +42,7 @@ class ListenMessage(BaseModel):
     state: Literal["start", "stop", "detect"] = Field(..., description="监听状态")
     mode: Optional[Literal["auto", "manual", "realtime"]] = Field(None, description="监听模式，仅在state=start时使用")
     text: Optional[str] = Field(None, description="唤醒词，仅在state=detect时使用")
+    agent_id: Optional[int] = Field(None, description="Agent ID")
 
 
 # ==================== Text消息 ====================

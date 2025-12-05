@@ -122,19 +122,40 @@ class WebSocketHandler:
         try:
             listen_msg = ListenMessage(**message)
             session_id = listen_msg.session_id or self.current_session_id
-            
-            if not session_id:
-                await self.send_error(400, "缺少session_id")
-                return
+            agent_id = listen_msg.agent_id or self.current_agent_id
             
             if listen_msg.state == "start":
                 # 开始监听 - 需要确保workflow已初始化
-                if not self.workflow_manager:
-                    await self.send_error(400, "Workflow未初始化，请先发送文本消息")
+                if not agent_id:
+                    await self.send_error(400, "缺少agent_id，无法初始化workflow")
                     return
                 
+                # 验证agent是否属于当前用户
+                from src.agents.services.agent_service import AgentService
+                agent_service = AgentService()
+                agent = await agent_service.get_agent_detail(self.db, agent_id, self.user_id)
+                
+                if not agent:
+                    await self.send_error(404, "Agent不存在或无权限访问")
+                    return
+                
+                # 获取或创建会话
+                if not session_id:
+                    from src.agents.services.session_service import SessionService
+                    session_service = SessionService()
+                    session = await session_service.create_session(self.db, self.user_id, agent_id)
+                    session_id = session['session_id']
+                
+                # 更新当前会话和agent
+                self.current_session_id = session_id
+                self.current_agent_id = agent_id
+                
+                # 如果workflow未初始化或agent_id不匹配，初始化workflow
+                if not self.workflow_manager or self.workflow_manager.agent_id != agent_id:
+                    await self._initialize_workflow(agent_id, session_id)
+                
                 # 如果workflow已初始化，VAD节点会自动处理音频流
-                logger.info(f"开始监听: session_id={session_id}, mode={listen_msg.mode}")
+                logger.info(f"开始监听: session_id={session_id}, agent_id={agent_id}, mode={listen_msg.mode}")
                 
             elif listen_msg.state == "stop":
                 # 停止监听

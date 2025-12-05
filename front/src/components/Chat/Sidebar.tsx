@@ -7,7 +7,7 @@ import { sessionsApi } from '../../services/sessions'
 
 export default function Sidebar() {
   const { user, logout } = useAuthStore()
-  const { currentSession, setCurrentSession, sessions, loadSessions } = useChatStore()
+  const { currentSession, setCurrentSession, sessions, loadSessions, addSession } = useChatStore()
   const { currentAgent, setCurrentAgent, agents, loadAgents } = useAgentStore()
   const navigate = useNavigate()
   const [showAgentSelector, setShowAgentSelector] = useState(false)
@@ -33,6 +33,7 @@ export default function Sidebar() {
     try {
       const session = await sessionsApi.createSession({ agent_id: agentId })
       setCurrentSession(session)
+      addSession(session)
       setCurrentAgent(agents.find(a => a.id === agentId) || null)
       setShowAgentSelector(false)
     } catch (error) {

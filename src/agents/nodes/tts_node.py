@@ -61,10 +61,33 @@ class TTSNode(Node):
     # 语音命令正则表达式
     VOICE_COMMAND_PATTERN = re.compile(r'<voice\|([^>]+)>')
 
-    async def run(self, context):
+    async def initialize(self, context):
+        """初始化节点 - 在run之前调用，确保所有资源在接收数据前已准备好"""
         self._user_data = context.get_global_var("user_data")
         self._logger = get_logger(__name__)
         self._session_id = context.get_global_var("session_id")
+
+        # 速率控制参数（需要先设置，因为AudioSend需要这些参数）
+        self._frame_duration = 0.06  # 60ms
+        self._buffer_time = 0.3      # 300ms
+        
+        # 状态跟踪
+        self._total_sentences = 0
+        self._is_tts_active = False  # TTS是否正在发送状态
+        
+        # 优先创建AudioSend实例（在可能接收数据之前完成初始化，避免竞态条件）
+        agent_id = context.get_global_var("agent_id")
+        if agent_id is None:
+            raise ValueError("agent_id 未在全局变量中设置")
+        self._audio_send = AudioSend(
+            agent_id=agent_id,
+            emit_chunk=self.emit_chunk,
+            frame_duration=self._frame_duration,
+            buffer_time=self._buffer_time
+        )
+        
+        # 启动AudioSend的事件处理器
+        await self._audio_send.start()
 
         self._tts_cfg = self._load_config(context)
         
@@ -81,32 +104,13 @@ class TTSNode(Node):
         from src.common.utils.audio.audio_codec import AudioCodec
         self._audio_codec = AudioCodec(sample_rate=16000, channels=1)
         
-        # 速率控制参数
-        self._frame_duration = 0.06  # 60ms
-        self._buffer_time = 0.3      # 300ms
-        
-        # 状态跟踪
-        self._total_sentences = 0
-        self._is_tts_active = False  # TTS是否正在发送状态
-        
         # 初始化情绪解析器
         self._emotion_parser = EmotionParser()
-
-        # 创建AudioSend实例
-        agent_id = context.get_global_var("agent_id")
-        if agent_id is None:
-            raise ValueError("agent_id 未在全局变量中设置")
-        self._audio_send = AudioSend(
-            agent_id=agent_id,
-            emit_chunk=self.emit_chunk,
-            frame_duration=self._frame_duration,
-            buffer_time=self._buffer_time
-        )
-        
-        # 启动AudioSend的事件处理器
-        await self._audio_send.start()
         
         context.log_info(f"TTS 节点初始化完成: {self._tts_cfg}")
+
+    async def run(self, context):
+        """运行节点 - 持续运行，等待处理流式数据"""
         await asyncio.sleep(float("inf"))
 
     async def shutdown(self):
@@ -129,7 +133,7 @@ class TTSNode(Node):
         ai_providers = context.get_global_var("ai_providers") or {}
         
         # 2. 解析 TTS 服务配置
-        service_name = "azure_tts_service"  # 默认值
+        service_name = "azure_tts"  # 默认值
         use_stream = True  # 默认使用流式
         if ai_providers and "tts" in ai_providers:
             tts_config = ai_providers["tts"]

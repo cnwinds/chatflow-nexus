@@ -8,6 +8,7 @@ interface ChatState {
   messages: Message[]
   setCurrentSession: (session: Session | null) => void
   loadSessions: () => Promise<void>
+  addSession: (session: Session) => void
   loadMessages: (sessionId: string) => Promise<Message[]>
   addMessage: (message: Message) => void
   updateMessage: (id: number, updates: Partial<Message>) => void
@@ -46,6 +47,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
         console.error('加载会话列表失败:', error)
       }
     }
+  },
+
+  addSession: (session) => {
+    set((state) => {
+      // 检查会话是否已存在，避免重复添加
+      const exists = state.sessions.some(s => s.session_id === session.session_id)
+      if (exists) {
+        return state
+      }
+      // 将新会话添加到列表开头
+      return { sessions: [session, ...state.sessions] }
+    })
   },
 
   loadMessages: async (sessionId: string) => {

@@ -3,6 +3,7 @@ import {
   HelloRequest,
   HelloResponse,
   TextMessage,
+  ListenMessage,
   LLMMessage,
   TTSMessage,
   ErrorMessage,
@@ -167,15 +168,11 @@ export class WebSocketClient {
         // 或者修改后端支持通过URL参数传递token
         
         this.ws.onopen = () => {
-          console.log('WebSocket连接已打开，准备发送Hello消息')
           this.setState(WebSocketState.CONNECTED)
           this.reconnectAttempts = 0
           
           // 发送hello消息
           this.sendHello()
-            .then(() => {
-              console.log('Hello消息已发送，等待响应...')
-            })
             .catch(err => {
               console.error('发送Hello消息失败:', err)
               if (helloReject) {
@@ -199,7 +196,6 @@ export class WebSocketClient {
               helloResolved = true
               clearTimeout(helloTimeout)
               if (helloResolve) {
-                console.log('Hello消息交换完成，调用resolve')
                 helloResolve()
               }
             }
@@ -263,7 +259,6 @@ export class WebSocketClient {
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1)
     
     this.reconnectTimer = window.setTimeout(() => {
-      console.log(`尝试重连 (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`)
       this.connect().catch(() => {
         // 重连失败，继续尝试
       })
@@ -299,7 +294,6 @@ export class WebSocketClient {
       switch (message.type) {
         case 'hello':
           // Hello响应（helloExchanged标志在connect的onmessage中设置）
-          console.log('收到Hello响应:', message)
           // 确保标志已设置（防止在connect之外收到hello消息）
           if (!this.helloExchanged) {
             this.helloExchanged = true
@@ -307,12 +301,10 @@ export class WebSocketClient {
           break
           
         case 'llm':
-          console.log('收到LLM消息:', message)
           this.onLLMMessageCallbacks.forEach(callback => callback(message as LLMMessage))
           break
           
         case 'tts':
-          console.log('收到TTS消息:', message)
           this.onTTSMessageCallbacks.forEach(callback => callback(message as TTSMessage))
           break
           
@@ -359,7 +351,6 @@ export class WebSocketClient {
   }
   
   sendText(message: TextMessage): void {
-    console.log('WebSocket发送文本消息:', message)
     this.send(message)
   }
   
@@ -369,6 +360,10 @@ export class WebSocketClient {
     }
     
     this.ws.send(data)
+  }
+
+  sendListen(message: ListenMessage): void {
+    this.send(message)
   }
 }
 

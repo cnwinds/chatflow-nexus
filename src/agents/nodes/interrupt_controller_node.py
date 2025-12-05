@@ -93,7 +93,8 @@ class InterruptControllerNode(Node):
         })
     }
 
-    async def run(self, context):
+    async def initialize(self, context):
+        """初始化节点 - 在run之前调用，确保所有资源在接收数据前已准备好"""
         self._logger = get_logger(__name__)
 
         # 从全局上下文获取 agent_id（用于日志标识）
@@ -101,6 +102,7 @@ class InterruptControllerNode(Node):
 
         # 加载配置
         self._ai_providers = context.get_global_var("ai_providers") or {}
+        self.engine = context.get_global_var("engine")
 
         # 策略配置(带默认值)
         policy = context.get_global_var("user.config.function_settings.interrupt_policy") or {}
@@ -126,6 +128,9 @@ class InterruptControllerNode(Node):
         self._user_prompt = self.get_config("config.user_prompt")
         
         context.log_info("InterruptController 初始化完成")
+
+    async def run(self, context):
+        """运行节点 - 持续运行，等待处理流式数据"""
         await asyncio.sleep(float("inf"))
 
     async def shutdown(self):

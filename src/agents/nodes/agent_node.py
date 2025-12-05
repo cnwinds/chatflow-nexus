@@ -97,7 +97,8 @@ class AgentNode(Node):
         })
     }
 
-    async def run(self, context):
+    async def initialize(self, context):
+        """初始化节点 - 在run之前调用，确保所有资源在接收数据前已准备好"""
         self.context = context
 
         # 从全局上下文获取配置
@@ -133,14 +134,11 @@ class AgentNode(Node):
         # 3. 获取工具列表（全局 UTCP）
         from src.agents.utcp_tools import get_utcp_tools
         self.tools = await get_utcp_tools(tags=["llm_tools"])
-        
+
         self._is_playing: bool = False
-        config_info = {
-            "llm_config": self.llm_config,
-            "has_intro": self.intro is not None,
-            "has_system_prompt": self.system_prompt is not None,
-            "has_user_prompt": self.user_prompt is not None
-        }
+
+    async def run(self, context):
+        """运行节点 - 持续运行，等待处理流式数据"""
         import asyncio
         await asyncio.sleep(float("inf"))
 
@@ -287,7 +285,16 @@ class AgentNode(Node):
         user_prompt_text = self.engine.render_template(self.user_prompt, **format_vars)
 
         # 获取消息列表（chat_record_node 已自动添加上下文）
-        messages = self.chat_record.get_chat_messages(system_prompt_text, user_prompt_text)
+        if self.chat_record is None:
+            self.context.log_warning(f"Agent {self.node_id} chat_record_node 未找到，使用空历史记录")
+            # 构建基本消息列表（无历史记录）
+            messages = []
+            if system_prompt_text and system_prompt_text.strip():
+                messages.append({"role": "system", "content": system_prompt_text.strip()})
+            if user_prompt_text and user_prompt_text.strip():
+                messages.append({"role": "user", "content": user_prompt_text.strip()})
+        else:
+            messages = self.chat_record.get_chat_messages(system_prompt_text, user_prompt_text)
         
         # 流式响应回调：将内容增量发送到输出流
         async def on_delta(chunk_type: str, data: Dict[str, Any]):

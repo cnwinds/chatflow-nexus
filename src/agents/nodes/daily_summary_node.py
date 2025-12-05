@@ -71,8 +71,8 @@ class DailySummaryNode(Node):
         })
     }
 
-    async def run(self, context):
-        """节点执行逻辑"""
+    async def initialize(self, context):
+        """初始化节点 - 在run之前调用，确保所有资源在接收数据前已准备好"""
         self.context = context
         self.logger = get_logger(__name__)
         
@@ -87,12 +87,13 @@ class DailySummaryNode(Node):
         
         if not self.system_prompt or not self.user_prompt:
             self.logger.error("daily_summary 节点缺少 system_prompt 或 user_prompt 配置")
-            return {}
+            return
         
         # 初始化repository
         self.repository = GrowthSummaryRepository(self.db_manager)
-        
-        # 持续运行，等待接收trigger
+
+    async def run(self, context):
+        """运行节点 - 持续运行，等待处理流式数据"""
         await asyncio.sleep(float("inf"))
     
     async def on_chunk_received(self, param_name: str, chunk: StreamChunk):

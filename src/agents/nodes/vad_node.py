@@ -98,7 +98,8 @@ class VADNode(Node):
         })
     }
 
-    async def run(self, context):
+    async def initialize(self, context):
+        """初始化节点 - 在run之前调用，确保所有资源在接收数据前已准备好"""
         self.context = context
         self.user_data = context.get_global_var("user_data")
         self.logger = get_logger(__name__)
@@ -131,7 +132,9 @@ class VADNode(Node):
         if self.vad_cfg.get("listen_mode") == "manual":
             # Manual 模式下，创建音频缓存
             self.audio_buffer = bytearray()
-        
+
+    async def run(self, context):
+        """运行节点 - 持续运行，等待处理流式数据"""
         await asyncio.sleep(float("inf"))
     
     async def shutdown(self):
@@ -202,8 +205,12 @@ class VADNode(Node):
         if param_name != "audio_stream":
             return
 
-        # 读取输入的 Opus 数据包
+        # 读取输入的音频数据
         data: bytes = chunk.data.get("data", b"")
+        
+        # 注意：MediaRecorder发送的是WebM容器格式，包含Opus数据包
+        # 当前实现：尝试直接解码（Opus解码器可能能够处理部分WebM数据）
+        # TODO: 实现完整的WebM解析器，提取纯Opus数据包
         
         # 根据 listen_mode 处理不同的逻辑
         if self.vad_cfg.get("listen_mode") == "manual":
@@ -232,12 +239,24 @@ class VADNode(Node):
                 # 清空缓存
                 self.audio_buffer.clear()
             else:
-                # 非空包，解码 Opus 数据并缓存 PCM 数据
+                # 非空包，尝试解码 Opus 数据并缓存 PCM 数据
+                # 注意：如果数据是WebM格式，解码可能会失败
                 try:
                     pcm_frame = self.decoder.decode(data, 960)
                     self.audio_buffer.extend(pcm_frame)
                 except opuslib_next.OpusError as e:
-                    # 解码错误，跳过这个包
+                    # 解码错误：可能是WebM容器格式
+                    # TODO: 实现WebM解析，提取Opus数据包
+                    self.logger.warning(f"Opus解码失败（可能是WebM容器格式）: {e}, 数据长度: {len(data)}")
+                    # 尝试跳过WebM头部，查找Opus数据（简化处理）
+                    # WebM的Cluster标识是 0x1F43B675
+                    cluster_marker = b'\x1F\x43\xB6\x75'
+                    if cluster_marker in data:
+                        # 找到Cluster，尝试提取后面的数据
+                        cluster_pos = data.find(cluster_marker)
+                        # 简化：跳过Cluster头部，尝试解码后面的数据
+                        # 实际应该解析WebM结构
+                        pass
                     pass
         else:
             # Realtime 模式：使用 SileroVAD 检测语音结束

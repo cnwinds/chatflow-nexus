@@ -1,6 +1,6 @@
 """Opus数据重打包器 - 保持Opus格式，支持静音填充"""
 
-import opuslib
+import opuslib_next
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 
@@ -81,18 +81,13 @@ class OpusRepackager:
                   f"建议使用: {valid_durations}")
         
         # Opus解码器
-        self.decoder = opuslib.Decoder(sample_rate, channels)
+        self.decoder = opuslib_next.Decoder(sample_rate, channels)
         
-        # Opus编码器
-        app_map = {
-            'voip': opuslib.APPLICATION_VOIP,
-            'audio': opuslib.APPLICATION_AUDIO,
-            'restricted_lowdelay': opuslib.APPLICATION_RESTRICTED_LOWDELAY
-        }
-        self.encoder = opuslib.Encoder(
+        # Opus编码器 (opuslib_next 使用字符串参数)
+        self.encoder = opuslib_next.Encoder(
             sample_rate, 
             channels, 
-            app_map.get(opus_application, opuslib.APPLICATION_VOIP)
+            opus_application  # 'voip', 'audio', 'restricted_lowdelay'
         )
         self.encoder.bitrate = opus_bitrate
         
@@ -485,7 +480,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n❌ 示例运行失败: {e}")
         print("\n需要安装:")
-        print("  pip install opuslib")
+        print("  pip install opuslib-next")
         print("\n注意:")
         print("  - 示例中的mock数据不是真实的Opus packet")
         print("  - 实际使用需要从OpusStreamParser获取真实数据")

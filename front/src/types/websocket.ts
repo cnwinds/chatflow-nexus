@@ -31,6 +31,7 @@ export interface ListenMessage {
   state: 'start' | 'stop' | 'detect'
   mode?: 'auto' | 'manual' | 'realtime'
   text?: string
+  agent_id?: number
 }
 
 // Text消息

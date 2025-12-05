@@ -369,7 +369,7 @@ class AzureTTSService(UTCPService):
     @property
     def name(self) -> str:
         """服务名称"""
-        return "azure_tts_service"
+        return "azure_tts"
     
     @property
     def description(self) -> str:

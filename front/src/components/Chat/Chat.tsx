@@ -20,8 +20,23 @@ export default function Chat() {
     }
   }, [loadAgents])
 
-  // 初始化 WebSocket 连接并监听 LLM 消息
+  // 当选择了会话后，初始化 WebSocket 连接并监听 LLM 消息
   useEffect(() => {
+    // 只有在选择了会话后才连接 WebSocket
+    if (!currentSession) {
+      // 如果没有会话，断开连接
+      const wsClient = getWebSocketClient()
+      if (wsClient.isConnected()) {
+        wsClient.disconnect()
+      }
+      // 清理之前的监听器
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current()
+        unsubscribeRef.current = null
+      }
+      return
+    }
+
     const wsClient = getWebSocketClient()
     
     // 确保 WebSocket 已连接
@@ -59,7 +74,7 @@ export default function Chat() {
         unsubscribeRef.current = null
       }
     }
-  }, [appendToLastAssistantMessage])
+  }, [currentSession, appendToLastAssistantMessage])
 
   return (
     <div className="flex h-screen bg-gray-100">

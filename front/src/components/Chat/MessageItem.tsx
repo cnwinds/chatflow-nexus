@@ -1,6 +1,11 @@
 import { Message } from '../../types'
 import { marked } from 'marked'
 
+// 配置 marked 以保留换行符
+marked.setOptions({
+  breaks: true, // 将单个换行符转换为 <br>
+})
+
 interface MessageItemProps {
   message: Message
 }

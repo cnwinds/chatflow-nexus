@@ -75,7 +75,8 @@ class STTNode(Node):
     # 配置参数定义（使用 FieldSchema 格式）
     CONFIG_PARAMS = {}
 
-    async def run(self, context):
+    async def initialize(self, context):
+        """初始化节点 - 在run之前调用，确保所有资源在接收数据前已准备好"""
         self._context = context
         self._session_id = context.get_global_var("session_id")
 
@@ -84,6 +85,9 @@ class STTNode(Node):
         self._sequence_number = 0  # 流水号计数器
         
         context.log_info(f"STT 节点初始化完成: {self._cfg}")
+
+    async def run(self, context):
+        """运行节点 - 持续运行，等待处理流式数据"""
         await asyncio.sleep(float("inf"))
 
     def _load_config(self, context) -> Dict[str, Any]:

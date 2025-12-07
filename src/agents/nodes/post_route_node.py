@@ -5,7 +5,7 @@
 收集到完整句子后才发送给TTS节点。同时解析路由指令并发送给RouteNode。
 
 输入:
-- text_stream: 统一的文本流输入（来自opening_agent_node或agent_node）
+- text_stream: 统一的文本流输入（来自agent_node）
 
 输出:
 - sentence_stream: 完整句子流，发送给TTS节点
@@ -106,14 +106,15 @@ class PostRouteNode(Node):
         
         # 处理每个完整句子
         for sentence in sentences:
-            # 检查是否是路由指令
+            # 检查是否是路由指令（去除空白字符进行匹配，但发送时保留所有空白字符）
             route_match = self._ROUTE_PATTERN.match(sentence.strip())
             
             if route_match:
                 # 是路由指令，提取并发送
                 await self._process_route_command(route_match)
             else:
-                # 普通句子，发送给 TTS
+                # 普通句子，发送给 TTS（完全保留所有空白字符）
+                # 只检查是否包含非空白字符
                 if sentence.strip():
                     await self.emit_chunk("sentence_stream", {"text": sentence})
                     self.context.log_debug(f"发送句子: {sentence[:50]}...")
@@ -145,13 +146,14 @@ class PostRouteNode(Node):
 
     async def _flush_remaining(self):
         """清空缓冲区，发送所有剩余内容"""
+        # 检查是否包含非空白字符
         if not self._buffer.strip():
             return
         
         # 处理所有剩余内容
         await self._process_buffer()
         
-        # 如果还有剩余文本，作为最后一句发送
+        # 如果还有剩余文本，作为最后一句发送（完全保留所有空白字符）
         if self._buffer.strip():
             await self.emit_chunk("sentence_stream", {"text": self._buffer})
             self.context.log_debug(f"最终发送: {self._buffer[:50]}...")

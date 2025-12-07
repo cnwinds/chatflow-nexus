@@ -148,7 +148,6 @@ class ChatRecordNode(Node):
     async def run(self, context):
         """节点主循环"""
         await self._load_history()
-        await self._trigger_opening()
         await asyncio.sleep(float("inf"))
     
     async def _load_history(self):
@@ -189,15 +188,6 @@ class ChatRecordNode(Node):
         except Exception as e:
             self._logger.error(f"加载历史异常: {e}", exc_info=True)
     
-    async def _trigger_opening(self):
-        """触发开场白生成"""
-        try:
-            opening_node = self.engine.get_node("opening")
-            if opening_node:
-                await opening_node.feed_input_chunk("session_start", {"session_id": self.session_id})
-        except Exception as e:
-            self._logger.warning(f"触发开场白失败: {e}")
-
     # ==================== 消息处理 ====================
     
     async def on_chunk_received(self, param_name: str, chunk: StreamChunk):

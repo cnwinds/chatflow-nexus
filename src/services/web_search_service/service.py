@@ -73,7 +73,7 @@ class WebSearchService(UTCPService):
         # 服务配置
         self.default_search_engine = self.service_config.get("default_search_engine", "search_pro")
         self.default_count = self.service_config.get("default_count", 10)
-        self.default_content_size = self.service_config.get("default_content_size", "medium")
+        self.default_content_size = self.service_config.get("default_content_size", "high")
         self.default_recency_filter = self.service_config.get("default_recency_filter", "noLimit")
         self.timeout = self.service_config.get("timeout", 30)
         
@@ -169,7 +169,7 @@ class WebSearchService(UTCPService):
                         "type": "string",
                         "enum": ["low", "medium", "high"],
                         "description": "网页摘要字数：low(较少)、medium(中等)、high(较多)",
-                        "default": "medium"
+                        "default": "high"
                     }
                 },
                 ["search_query"]
@@ -242,7 +242,7 @@ class WebSearchService(UTCPService):
         # 如果指定了域名过滤，则添加该参数
         if search_domain_filter:
             request_params["search_domain_filter"] = search_domain_filter
-        
+        print("===========================",request_params)
         # 调用智谱AI Web Search API（同步调用包装为异步）
         try:
             # 在线程池中执行同步API调用
@@ -253,13 +253,37 @@ class WebSearchService(UTCPService):
                 request_params
             )
             
+            # 调试：打印完整API响应
+            logger.debug(f"API原始响应类型: {type(response)}")
+            logger.debug(f"API原始响应内容: {response}")
+            
             # 处理响应结果
             if response:
                 # 提取搜索结果
                 results = []
-                if isinstance(response, dict):
+                
+                # 检查是否是WebSearchResp对象（有search_result属性）
+                if hasattr(response, 'search_result'):
+                    search_result_list = response.search_result
+                    if search_result_list:
+                        # 将SearchResultResp对象转换为字典
+                        for item in search_result_list:
+                            result_dict = {
+                                "title": getattr(item, 'title', ''),
+                                "url": getattr(item, 'link', ''),
+                                "snippet": getattr(item, 'content', ''),
+                                "site_name": getattr(item, 'media', ''),
+                                "icon": getattr(item, 'icon', ''),
+                                "publish_date": getattr(item, 'publish_date', ''),
+                                "refer": getattr(item, 'refer', ''),
+                                "images": getattr(item, 'images', None)
+                            }
+                            results.append(result_dict)
+                elif isinstance(response, dict):
                     # 如果响应是字典，尝试提取搜索结果
-                    if "results" in response:
+                    if "search_result" in response:
+                        results = response["search_result"]
+                    elif "results" in response:
                         results = response["results"]
                     elif "data" in response:
                         results = response["data"]

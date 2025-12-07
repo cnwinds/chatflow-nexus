@@ -469,7 +469,7 @@ def split_text_by_sentences(text: str) -> Tuple[str, List[str]]:
         
     Returns:
         去掉分隔出句子后的剩余文本  
-        句子列表，每个句子已去除首尾空白
+        句子列表，每个句子完全保留所有空白字符（空格、制表符、换行符等）
     """
     # 结束标点集合
     end_punctuations = set('。！？.!?～…“”"')
@@ -496,8 +496,9 @@ def split_text_by_sentences(text: str) -> Tuple[str, List[str]]:
         # 如果遇到 <，需要找到对应的 > 形成完整标签
         if char == '<':
             # 先将 < 之前的内容断句
-            before = text[sentence_start:i].strip()
-            if before:
+            before = text[sentence_start:i]
+            # 检查是否包含非空白字符
+            if before.strip():
                 sentences.append(before)
             
             # 查找对应的 >
@@ -523,7 +524,7 @@ def split_text_by_sentences(text: str) -> Tuple[str, List[str]]:
         
         # 如果当前字符是结束标点
         if char in end_punctuations:
-            # 查找下一个非结束标点、非空白字符的位置
+            # 查找下一个非结束标点字符的位置（不跳过任何空白字符）
             j = i + 1
             found_non_end_punct = False
             
@@ -532,24 +533,22 @@ def split_text_by_sentences(text: str) -> Tuple[str, List[str]]:
                 
                 # 如果遇到 <，也视为找到断句点
                 if next_char == '<':
-                    sentence = text[sentence_start:j].strip()
-                    if sentence:
+                    sentence = text[sentence_start:j]
+                    # 检查是否包含非空白字符
+                    if sentence.strip():
                         sentences.append(sentence)
                     sentence_start = j
                     found_non_end_punct = True
                     i = j
                     break
                 
-                # 跳过空白字符
-                if next_char.isspace():
-                    j += 1
-                    continue
-                
+                # 不跳过任何空白字符，保留所有空格、制表符和换行符
                 # 如果遇到非结束标点字符，则在此处断句
                 if next_char not in end_punctuations:
-                    # 提取句子（从 sentence_start 到 j-1）
-                    sentence = text[sentence_start:j].strip()
-                    if sentence:
+                    # 提取句子（从 sentence_start 到 j-1），完全保留所有空白字符
+                    sentence = text[sentence_start:j]
+                    # 检查是否包含非空白字符
+                    if sentence.strip():
                         sentences.append(sentence)
                     sentence_start = j
                     found_non_end_punct = True
@@ -565,8 +564,8 @@ def split_text_by_sentences(text: str) -> Tuple[str, List[str]]:
         
         i += 1
     
-    # 剩余文本（未形成完整句子的部分）
-    remaining_text = text[sentence_start:].strip()
+    # 剩余文本（未形成完整句子的部分），完全保留所有空白字符
+    remaining_text = text[sentence_start:]
     
     return remaining_text, sentences
 

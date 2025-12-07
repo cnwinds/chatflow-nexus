@@ -156,7 +156,6 @@ CALL create_agent_template(
       'chat_control_play_music', true,
       'chat_control_switch_role', true,
       'enable_user_clone_voice', true,
-      'enable_opening_say_hello', true,
       'daily_summary_time', '18:00'
     ),
     'hardware_settings', JSON_OBJECT(

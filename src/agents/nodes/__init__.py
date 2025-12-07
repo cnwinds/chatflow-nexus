@@ -5,7 +5,6 @@ from .vad_node import VADNode  # noqa: F401
 from .stt_node import STTNode  # noqa: F401
 from .agent_node import AgentNode  # noqa: F401
 from .tts_node import TTSNode  # noqa: F401
-from .opening_agent_node import OpeningAgentNode  # noqa: F401
 from .post_route_node import PostRouteNode  # noqa: F401
 from .route_node import RouteNode  # noqa: F401
 from .interrupt_controller_node import InterruptControllerNode  # noqa: F401

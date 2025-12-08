@@ -121,6 +121,8 @@ class ChatRecordNode(Node):
         # 初始化状态
         self._chat_history: List[Dict[str, Any]] = []
         self._ai_text_buffer: str = ""
+        self._history_loaded: bool = False
+        self._history_loading_task: Optional[asyncio.Task] = None
 
     def _load_global_config(self, context):
         """加载全局配置"""
@@ -147,7 +149,9 @@ class ChatRecordNode(Node):
 
     async def run(self, context):
         """节点主循环"""
-        await self._load_history()
+        # 启动时立即加载历史记录
+        self._history_loading_task = asyncio.create_task(self._load_history())
+        await self._history_loading_task
         await asyncio.sleep(float("inf"))
     
     async def _load_history(self):
@@ -185,8 +189,13 @@ class ChatRecordNode(Node):
             self.context_manager.sync_history_to_context(self._chat_history)
             await self._check_and_compress()
             
+            # 标记历史记录已加载完成
+            self._history_loaded = True
+            self._logger.info("聊天历史已加载并同步到上下文")
+            
         except Exception as e:
             self._logger.error(f"加载历史异常: {e}", exc_info=True)
+            self._history_loaded = True  # 即使失败也标记为已加载，避免阻塞
     
     # ==================== 消息处理 ====================
     
@@ -349,8 +358,22 @@ class ChatRecordNode(Node):
         """添加聊天上下文"""
         self.context_manager.add_chat_context(role, content, **kwargs)
     
+    async def wait_for_history_loaded(self):
+        """等待历史记录加载完成（供其他节点调用）"""
+        if self._history_loaded:
+            return
+        if self._history_loading_task:
+            try:
+                await self._history_loading_task
+            except Exception as e:
+                self._logger.error(f"等待历史记录加载时出错: {e}", exc_info=True)
+    
     def get_chat_messages(self, system_prompt: Optional[str] = None, user_prompt: Optional[str] = None) -> List[Dict[str, Any]]:
         """构建 OpenAI 格式的消息列表"""
+        # 如果历史记录正在加载，记录警告（但继续返回当前上下文）
+        if not self._history_loaded and self._history_loading_task:
+            if not self._history_loading_task.done():
+                self._logger.warning("历史记录正在加载中，返回当前上下文（可能不完整）")
         return self.context_manager.get_chat_messages(system_prompt, user_prompt)
     
     def clear_chat_context(self):

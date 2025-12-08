@@ -294,6 +294,8 @@ class AgentNode(Node):
             if user_prompt_text and user_prompt_text.strip():
                 messages.append({"role": "user", "content": user_prompt_text.strip()})
         else:
+            # 等待历史记录加载完成（如果正在加载）
+            await self.chat_record.wait_for_history_loaded()
             messages = self.chat_record.get_chat_messages(system_prompt_text, user_prompt_text)
         
         # 流式响应回调：将内容增量发送到输出流

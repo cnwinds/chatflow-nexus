@@ -67,6 +67,23 @@ class TTSNode(Node):
         self._logger = get_logger(__name__)
         self._session_id = context.get_global_var("session_id")
 
+        # 读取 enabled 配置（默认 False，即默认不开启）
+        # 优先从节点配置读取，如果没有则从用户配置读取，都没有则默认为 False
+        node_enabled = self.get_config("config.enabled")
+        if node_enabled is None:
+            # 从用户配置读取
+            user_enabled = self._user_data.get_config("function_settings.enable_tts") if self._user_data else None
+            self._enabled = bool(user_enabled) if user_enabled is not None else False
+        else:
+            self._enabled = bool(node_enabled)
+        
+        self._logger.info(f"TTS 节点 enabled 状态: {self._enabled}")
+        
+        # 如果禁用，直接返回，不初始化音频相关资源
+        if not self._enabled:
+            context.log_info("TTS 节点已禁用，跳过音频资源初始化")
+            return
+
         # 速率控制参数（需要先设置，因为AudioSend需要这些参数）
         self._frame_duration = 0.06  # 60ms
         self._buffer_time = 0.3      # 300ms
@@ -115,6 +132,10 @@ class TTSNode(Node):
 
     async def shutdown(self):
         """清理节点资源"""
+        # 如果禁用，无需清理资源
+        if not getattr(self, '_enabled', False):
+            return
+        
         # 停止音频发送
         if hasattr(self, '_audio_send'):
             await self._audio_send.stop()
@@ -276,6 +297,11 @@ class TTSNode(Node):
         return voice_ids.get(voice_name, original_voice)
 
     async def on_chunk_received(self, param_name: str, chunk: StreamChunk):
+        # 检查是否启用
+        if not getattr(self, '_enabled', False):
+            self._logger.debug("TTS节点已禁用，忽略消息")
+            return
+        
         # 检查是否已初始化
         if not hasattr(self, '_audio_send') or self._audio_send is None:
             self._logger.warning("TTS节点尚未初始化，忽略消息")

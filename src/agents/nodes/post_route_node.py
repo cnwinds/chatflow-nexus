@@ -1,13 +1,17 @@
 """
 后路由节点
 
-负责收集来自LLM的流式文本内容，使用split_text_by_sentences分割句子，
-收集到完整句子后才发送给TTS节点。同时解析路由指令并发送给RouteNode。
+负责收集来自LLM的流式文本内容，识别路由指令，对普通文本进行处理。
+- 非路由指令：直接输出原始文本流到 text_stream（保持原始格式，支持markdown），
+  同时发送给 chat_record_node 保存和客户端显示
+- 路由指令：解析并发送给 RouteNode
+- TTS支持：使用 split_text_by_sentences 分割句子发送给 TTS 节点
 
 输入:
 - text_stream: 统一的文本流输入（来自agent_node）
 
 输出:
+- text_stream: 原始文本流（非路由指令时直接输出，保持原始格式），发送给 chat_record_node 和客户端
 - sentence_stream: 完整句子流，发送给TTS节点
 - route_command: 路由指令，发送给RouteNode
 """
@@ -30,31 +34,36 @@ from src.common.utils.audio.audio_utils import split_text_by_sentences
 
 @register_node("post_route_node")
 class PostRouteNode(Node):
-    """负责收集LLM流式文本，识别路由指令，对普通文本断句。
+    """负责收集LLM流式文本，识别路由指令，处理普通文本。
     
     功能: 接收来自 agent 节点的流式文本输出，识别其中的路由指令（格式：<route|agent_id|用户需求|转场描述>），
-    将路由指令发送给路由节点，将普通文本按句子分割后发送给 TTS 节点。
+    - 非路由指令：直接输出原始文本流到 text_stream（保持原始格式，支持markdown），
+      同时发送给 chat_record_node 保存和客户端显示
+    - 路由指令：解析并发送给路由节点
+    - TTS支持：使用 split_text_by_sentences 分割句子发送给 TTS 节点
     
     配置参数: 无
     """
     
-    EXECUTION_MODE = "streaming"
-    
+    EXECUTION_MODE = "streaming"    # 输入参数定义
     INPUT_PARAMS = {
         "text_stream": ParameterSchema(
             is_streaming=True,
-            schema={"text": "string"}
+            schema={'text': 'string'}
         )
-    }
-    
+    }    # 输出参数定义
     OUTPUT_PARAMS = {
         "sentence_stream": ParameterSchema(
             is_streaming=True,
-            schema={"text": "string"}
+            schema={'text': 'string'}
         ),
         "route_command": ParameterSchema(
             is_streaming=True,
-            schema={"target_agent": "string", "user_query": "string", "text": "string"}
+            schema={'target_agent': 'string', 'user_query': 'string', 'text': 'string'}
+        ),
+        "text_stream": ParameterSchema(
+            is_streaming=True,
+            schema={'text': 'string'}
         )
     }
     
@@ -67,6 +76,7 @@ class PostRouteNode(Node):
         """初始化节点状态"""
         self.context = context
         self._buffer = ""  # 文本缓冲区
+        self._processed_length = 0  # 已处理的文本长度（用于 text_stream 直通）
 
     async def run(self, context):
         """节点主循环"""
@@ -85,6 +95,8 @@ class PostRouteNode(Node):
             # 空文本表示流结束
             if text == "":
                 await self._flush_remaining()
+                # 确保发送空文本以触发chat_record_node保存AI回复
+                await self.emit_chunk("text_stream", {"text": ""})
                 await self.emit_chunk("sentence_stream", {"text": ""})
                 self.context.log_info("PostRoute 完成流处理")
                 return
@@ -99,28 +111,69 @@ class PostRouteNode(Node):
             self.context.log_error(f"PostRoute 处理文本失败: {e}", exc_info=True)
 
     async def _process_buffer(self):
-        """处理缓冲区内容：使用 split_text_by_sentences 分割，识别路由指令"""
-        # 使用 split_text_by_sentences 分割句子
-        # 该函数会将 <...> 标签作为独立句子返回
-        remaining, sentences = split_text_by_sentences(self._buffer)
-        
-        # 处理每个完整句子
-        for sentence in sentences:
-            # 检查是否是路由指令（去除空白字符进行匹配，但发送时保留所有空白字符）
-            route_match = self._ROUTE_PATTERN.match(sentence.strip())
+        """处理缓冲区内容：识别路由指令，非路由指令直接输出原始文本流"""
+        while True:
+            # 检查缓冲区中是否包含路由指令
+            route_match = self._ROUTE_PATTERN.search(self._buffer)
             
             if route_match:
-                # 是路由指令，提取并发送
-                await self._process_route_command(route_match)
+                # 找到路由指令，需要分离路由指令前后的文本
+                route_start = route_match.start()
+                route_end = route_match.end()
+                
+                # 路由指令前的文本，直接输出到 text_stream（直通，只发送新增部分）
+                if route_start > 0:
+                    before_route = self._buffer[:route_start]
+                    # 只发送新增的增量部分到 text_stream
+                    if len(before_route) > self._processed_length:
+                        new_text = before_route[self._processed_length:]
+                        await self.emit_chunk("text_stream", {"text": new_text})
+                        self._processed_length = len(before_route)
+                    
+                    # 同时处理成句子发送给 sentence_stream
+                    remaining, sentences = split_text_by_sentences(before_route)
+                    for sentence in sentences:
+                        await self.emit_chunk("sentence_stream", {"text": sentence})
+                
+                # 处理路由指令
+                route_text = self._buffer[route_start:route_end]
+                route_match_obj = self._ROUTE_PATTERN.match(route_text.strip())
+                if route_match_obj:
+                    await self._process_route_command(route_match_obj)
+                
+                # 更新缓冲区为路由指令后的文本，重置已处理长度
+                self._buffer = self._buffer[route_end:]
+                self._processed_length = 0
+                
+                # 继续处理剩余缓冲区（可能还有更多内容）
+                if not self._buffer:
+                    break
             else:
-                # 普通句子，发送给 TTS（完全保留所有空白字符）
-                # 只检查是否包含非空白字符
-                if sentence.strip():
-                    await self.emit_chunk("sentence_stream", {"text": sentence})
-                    self.context.log_debug(f"发送句子: {sentence[:50]}...")
-        
-        # 更新缓冲区为剩余文本
-        self._buffer = remaining
+                # 没有找到路由指令，检查是否可能包含不完整的路由指令
+                # 如果缓冲区以 <route| 开头但还没完整，保留在缓冲区中等待更多内容
+                if self._buffer.strip().startswith("<route|") and ">" not in self._buffer:
+                    # 可能是不完整的路由指令，等待更多内容
+                    break
+                
+                # 没有路由指令，直接输出到 text_stream（直通，只发送新增部分）
+                # 同时使用 split_text_by_sentences 分割句子发送给 sentence_stream
+                if self._buffer:
+                    # 只发送新增的增量部分到 text_stream（直通）
+                    if len(self._buffer) > self._processed_length:
+                        new_text = self._buffer[self._processed_length:]
+                        await self.emit_chunk("text_stream", {"text": new_text})
+                        self._processed_length = len(self._buffer)
+                    
+                    # 分割句子发送给 sentence_stream（只发送已完成的句子）
+                    remaining, sentences = split_text_by_sentences(self._buffer)
+                    for sentence in sentences:
+                        await self.emit_chunk("sentence_stream", {"text": sentence})
+                    
+                    # 更新缓冲区为剩余文本（未完成的句子）
+                    # 调整已处理长度：因为已完成句子已从缓冲区移除，剩余文本都已发送过
+                    self._buffer = remaining
+                    self._processed_length = len(remaining)
+                break
 
     async def _process_route_command(self, match: re.Match):
         """处理路由指令"""
@@ -146,15 +199,16 @@ class PostRouteNode(Node):
 
     async def _flush_remaining(self):
         """清空缓冲区，发送所有剩余内容"""
-        # 检查是否包含非空白字符
-        if not self._buffer.strip():
-            return
-        
         # 处理所有剩余内容
         await self._process_buffer()
         
-        # 如果还有剩余文本，作为最后一句发送（完全保留所有空白字符）
+        # 如果还有剩余文本，发送到 text_stream 和 sentence_stream
         if self._buffer.strip():
+            # 只发送新增的增量部分到 text_stream
+            if len(self._buffer) > self._processed_length:
+                new_text = self._buffer[self._processed_length:]
+                await self.emit_chunk("text_stream", {"text": new_text})
             await self.emit_chunk("sentence_stream", {"text": self._buffer})
-            self.context.log_debug(f"最终发送: {self._buffer[:50]}...")
+            self.context.log_debug(f"最终发送剩余文本: {self._buffer[:50]}...")
             self._buffer = ""
+            self._processed_length = 0

@@ -213,7 +213,7 @@ class ChatWorkflowManager:
         # 7. 文本响应回调（如果提供了回调函数）
         if self.text_response_callback:
             async def text_response_callback_wrapper(chunk):
-                """文本响应回调包装器 - 接收完整句子"""
+                """文本响应回调包装器 - 接收原始文本流"""
                 text = chunk.get("text", "")
                 # 处理所有文本，包括空字符串（表示响应完成）
                 logger.debug(f"文本响应回调包装器收到chunk: text长度={len(text) if text else 0}, text={text[:50] if text else 'empty'}")

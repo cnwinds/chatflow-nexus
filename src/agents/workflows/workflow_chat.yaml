@@ -87,13 +87,16 @@ workflow:
       top: 310
     name: post_route
     config: {}
+    data:
+      configParams: {}
   - id: tts
     type: tts_node
     position:
       left: 2250
       top: 310
     name: 文本转语音
-    config: {}
+    config:
+      enabled: false
   - id: mysql_node
     type: mysql_node
     position:
@@ -105,7 +108,7 @@ workflow:
   - id: chat_record
     type: chat_record_node
     position:
-      left: 1950
+      left: 1980
       top: -30
     name: ChatRecordNode
     config:
@@ -222,9 +225,9 @@ workflow:
   - id: edge-21-tts-agent1
     from: tts.tts_status
     to: agent1.tts_status
-  - id: reactflow__edge-post_routesentence_stream-chat_record_node-1762998037383ai_text
-    from: post_route.sentence_stream
-    to: chat_record.ai_text
   - id: reactflow__edge-interrupt_controllerrouted_user_text-chat_recorduser_text
     from: interrupt_controller.routed_user_text
     to: chat_record.user_text
+  - id: reactflow__edge-post_routetext_stream-chat_recordai_text
+    from: post_route.text_stream
+    to: chat_record.ai_text

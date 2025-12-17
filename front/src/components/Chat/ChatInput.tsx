@@ -5,12 +5,17 @@ import { sessionsApi } from '../../services/sessions'
 import { getWebSocketClient } from '../../services/websocket'
 import { TextMessage } from '../../types/websocket'
 import { useVoiceInput } from '../../hooks/useVoiceInput'
-import { MicrophoneIcon, StopIcon } from '@heroicons/react/24/solid'
+import { 
+  MicrophoneIcon, 
+  PaperAirplaneIcon,
+  PauseIcon,
+  XMarkIcon
+} from '@heroicons/react/24/solid'
 
 export default function ChatInput() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [inputMode, setInputMode] = useState<'text' | 'voice'>('text')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { currentSession, addMessage, setCurrentSession, messages, updateMessage, addSession } = useChatStore()
   const { currentAgent } = useAgentStore()
   
@@ -35,15 +40,13 @@ export default function ChatInput() {
     checkSupport()
   }, [checkSupport])
 
-  // 当停止录音时，如果是在语音模式，自动切换到文本模式
-  const prevIsRecordingRef = useRef(isRecording)
+  // 自动调整文本输入框高度
   useEffect(() => {
-    if (prevIsRecordingRef.current && !isRecording && inputMode === 'voice') {
-      // 录音已停止，可以切换回文本模式
-      // 注意：语音识别结果会通过后端自动处理，不需要手动发送
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`
     }
-    prevIsRecordingRef.current = isRecording
-  }, [isRecording, inputMode])
+  }, [input])
 
   const handleSend = async () => {
     if (!input.trim() || loading) return
@@ -134,38 +137,30 @@ export default function ChatInput() {
     // 普通 Enter 键默认行为是换行，不需要阻止
   }
 
-  const handleVoiceToggle = async () => {
-    if (inputMode === 'text') {
-      // 切换到语音模式
-      if (!currentAgent?.id) {
-        alert('请先选择一个Agent')
-        return
-      }
-      
-      // 确保有会话
-      let session = currentSession
-      if (!session) {
-        session = await sessionsApi.createSession({ agent_id: currentAgent.id })
-        setCurrentSession(session)
-        addSession(session)
-      }
-      
-      // 确保 WebSocket 已连接
-      const wsClient = getWebSocketClient()
-      if (!wsClient.isConnected()) {
-        await wsClient.connect()
-      }
-      
-      setInputMode('voice')
-      await startRecording()
-    } else {
-      // 切换回文本模式
-      await stopRecording()
-      setInputMode('text')
+  const handleVoiceStart = async () => {
+    if (!currentAgent?.id) {
+      alert('请先选择一个Agent')
+      return
     }
+    
+    // 确保有会话
+    let session = currentSession
+    if (!session) {
+      session = await sessionsApi.createSession({ agent_id: currentAgent.id })
+      setCurrentSession(session)
+      addSession(session)
+    }
+    
+    // 确保 WebSocket 已连接
+    const wsClient = getWebSocketClient()
+    if (!wsClient.isConnected()) {
+      await wsClient.connect()
+    }
+    
+    await startRecording()
   }
 
-  const handleStopVoice = async () => {
+  const handleVoiceStop = async () => {
     await stopRecording()
     
     // 确保有会话和agent
@@ -182,76 +177,114 @@ export default function ChatInput() {
         isStreaming: true,
       })
     }
-    
-    setInputMode('text')
   }
 
   return (
-    <div className="border-t border-border-primary bg-bg-primary p-4">
-      <div className="flex items-end space-x-4">
-        {inputMode === 'text' ? (
-          <>
+    <div className="border-t border-border-primary bg-bg-primary">
+      {/* 录音状态栏 */}
+      {isRecording && (
+        <div className="px-4 py-2 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="relative">
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+              <div className="absolute inset-0 w-3 h-3 bg-red-500 rounded-full animate-ping opacity-75"></div>
+            </div>
+            <span className="text-sm font-medium text-red-700 dark:text-red-400">
+              正在录音中...
+            </span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleVoiceStop}
+              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors flex items-center space-x-1"
+            >
+              <PauseIcon className="w-4 h-4" />
+              <span>停止</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 输入区域 */}
+      <div className="p-4">
+        <div className="flex items-center space-x-3">
+          {/* 文本输入框 */}
+          <div className="flex-1 relative">
             <textarea
+              ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="输入消息... (Ctrl+Enter发送)"
-              className="flex-1 resize-none border border-border-primary rounded-lg px-4 py-2 bg-bg-primary text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-accent-primary transition-colors"
-              rows={4}
+              placeholder={isRecording ? "正在录音，您也可以继续输入文字..." : "输入消息... (Ctrl+Enter发送)"}
+              className="w-full resize-none border border-border-primary rounded-xl px-4 py-3 pr-12 bg-bg-primary text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-accent-primary transition-all min-h-[52px] max-h-[200px] overflow-y-auto"
+              rows={1}
               disabled={loading}
             />
+            {/* 输入框内的快捷提示 */}
+            {!input && !isRecording && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                <span className="text-xs text-text-tertiary">Ctrl+Enter 发送</span>
+              </div>
+            )}
+          </div>
+
+          {/* 操作按钮组 */}
+          <div className="flex items-center space-x-2">
+            {/* 语音按钮 */}
             {isSupported && (
               <button
-                onClick={handleVoiceToggle}
+                onClick={isRecording ? handleVoiceStop : handleVoiceStart}
                 disabled={loading || !currentAgent}
-                className="p-2 text-text-secondary hover:text-accent-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                title="切换到语音输入"
+                className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
+                  isRecording
+                    ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
+                    : 'bg-bg-secondary hover:bg-bg-hover text-text-secondary hover:text-accent-primary'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                title={isRecording ? '停止录音' : '开始语音输入'}
               >
-                <MicrophoneIcon className="w-6 h-6" />
+                {isRecording ? (
+                  <PauseIcon className="w-6 h-6" />
+                ) : (
+                  <MicrophoneIcon className="w-6 h-6" />
+                )}
               </button>
             )}
+
+            {/* 发送按钮 */}
             <button
               onClick={handleSend}
-              disabled={loading || !input.trim()}
-              className="px-6 py-2 bg-accent-primary hover:bg-accent-hover text-text-inverse rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              disabled={loading || (!input.trim() && !isRecording)}
+              className="flex-shrink-0 w-12 h-12 bg-accent-primary hover:bg-accent-hover text-text-inverse rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center"
+              title="发送消息 (Ctrl+Enter)"
             >
-              {loading ? '发送中...' : '发送 (Ctrl+Enter)'}
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              ) : (
+                <PaperAirplaneIcon className="w-6 h-6" />
+              )}
             </button>
-          </>
-        ) : (
-          <>
-            <div className="flex-1 flex items-center justify-center px-4 py-2 border border-border-primary rounded-lg bg-bg-secondary">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                <span className="text-text-secondary">
-                  {isRecording ? '正在录音...' : '准备录音...'}
-                </span>
-              </div>
-            </div>
-            <button
-              onClick={handleStopVoice}
-              className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              title="停止录音"
-            >
-              <StopIcon className="w-6 h-6" />
-            </button>
-            <button
-              onClick={() => {
-                setInputMode('text')
-                stopRecording()
-              }}
-              className="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors"
-            >
-              取消
-            </button>
-          </>
-        )}
-      </div>
-      {!isSupported && (
-        <div className="mt-2 text-sm text-text-tertiary">
-          您的浏览器不支持语音输入功能
+          </div>
         </div>
-      )}
+
+        {/* 底部提示信息 */}
+        <div className="mt-2 flex items-center justify-between text-xs">
+          <div className="flex items-center space-x-4 text-text-tertiary">
+            {isSupported ? (
+              <span className="flex items-center space-x-1">
+                <MicrophoneIcon className="w-3 h-3" />
+                <span>支持语音输入</span>
+              </span>
+            ) : (
+              <span className="text-text-tertiary">您的浏览器不支持语音输入</span>
+            )}
+          </div>
+          {input && (
+            <span className="text-text-tertiary">
+              {input.length} 字符
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

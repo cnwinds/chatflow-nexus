@@ -1,0 +1,934 @@
+{% extends "admin/base.html" %}
+
+{% block title %}设备绑定 - AI Toys 后台管理系统{% endblock %}
+
+{% block page_title %}设备绑定{% endblock %}
+
+{% block content %}
+<!-- 步骤导航 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-link me-2"></i>设备绑定向导
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="step-item" id="step1">
+                            <div class="step-number">1</div>
+                            <div class="step-title">输入设备UUID</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="step-item" id="step2">
+                            <div class="step-number">2</div>
+                            <div class="step-title">选择用户</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="step-item" id="step3">
+                            <div class="step-number">3</div>
+                            <div class="step-title">选择Agent模板</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="step-item" id="step4">
+                            <div class="step-number">4</div>
+                            <div class="step-title">确认绑定</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 步骤1: 设备UUID输入 -->
+<div class="row mb-4" id="step1-content">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-mobile-alt me-2"></i>步骤1: 输入设备UUID
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <label class="form-label">设备UUID</label>
+                        <input type="text" class="form-control" id="deviceUuid" placeholder="请输入设备UUID">
+                        <div class="form-text">输入设备的唯一标识符</div>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button class="btn btn-custom" onclick="checkDevice()">
+                            <i class="fas fa-search me-2"></i>检查设备
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 设备信息显示 -->
+                <div id="deviceInfo" class="mt-3" style="display: none;">
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-2"></i>设备信息</h6>
+                        <div id="deviceDetails"></div>
+                    </div>
+                </div>
+                
+                <!-- 设备不存在时的输入框 -->
+                <div id="newDeviceInfo" class="mt-3" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">设备名称</label>
+                            <input type="text" class="form-control" id="deviceName" placeholder="请输入设备名称">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">设备类型</label>
+                            <select class="form-select" id="deviceType">
+                                <option value="1">智能音箱</option>
+                                <option value="2">智能显示屏</option>
+                                <option value="3">机器人</option>
+                                <option value="4">车载设备</option>
+                                <option value="5">可穿戴设备</option>
+                                <option value="0">其他</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 步骤2: 用户选择 -->
+<div class="row mb-4" id="step2-content" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-users me-2"></i>步骤2: 选择用户
+                </div>
+                <button class="btn btn-sm btn-outline-primary" onclick="loadUsers()">
+                    <i class="fas fa-sync-alt me-1"></i>刷新
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th width="50">选择</th>
+                                        <th>用户ID</th>
+                                        <th>用户名</th>
+                                        <th>登录名</th>
+                                        <th>手机号</th>
+                                        <th>用户类型</th>
+                                        <th>状态</th>
+                                        <th>注册时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersTable">
+                                    <tr>
+                                        <td colspan="8" class="text-center">
+                                            <div class="loading">
+                                                <div class="spinner-border" role="status"></div>
+                                                <div class="mt-2">加载中...</div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 用户信息显示 -->
+                <div id="userInfo" class="mt-3" style="display: none;">
+                    <div class="alert alert-success">
+                        <h6><i class="fas fa-user me-2"></i>选中用户信息</h6>
+                        <div id="userDetails"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 步骤3: Agent模板选择 -->
+<div class="row mb-4" id="step3-content" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-robot me-2"></i>步骤3: 选择Agent模板
+                </div>
+                <button class="btn btn-sm btn-outline-primary" onclick="loadTemplates()">
+                    <i class="fas fa-sync-alt me-1"></i>刷新
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th width="50">选择</th>
+                                        <th>模板ID</th>
+                                        <th>模板名称</th>
+                                        <th>设备类型</th>
+                                        <th>性别</th>
+                                        <th>描述</th>
+                                        <th>创建者</th>
+                                        <th>状态</th>
+                                        <th>创建时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="templatesTable">
+                                    <tr>
+                                        <td colspan="9" class="text-center">
+                                            <div class="loading">
+                                                <div class="spinner-border" role="status"></div>
+                                                <div class="mt-2">加载中...</div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 模板信息显示 -->
+                <div id="templateInfo" class="mt-3" style="display: none;">
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-cog me-2"></i>选中模板信息</h6>
+                        <div id="templateDetails"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 步骤4: 确认绑定 -->
+<div class="row mb-4" id="step4-content" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-check-circle me-2"></i>步骤4: 确认绑定信息
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <h6>绑定信息确认</h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <tbody>
+                                    <tr>
+                                        <td class="fw-bold">设备UUID</td>
+                                        <td id="confirmDeviceUuid">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">设备名称</td>
+                                        <td id="confirmDeviceName">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">设备类型</td>
+                                        <td id="confirmDeviceType">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">绑定用户</td>
+                                        <td id="confirmUserName">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Agent模板</td>
+                                        <td id="confirmTemplateName">-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-12 text-center">
+                        <button class="btn btn-success btn-lg" onclick="executeBinding()">
+                            <i class="fas fa-link me-2"></i>确认绑定设备
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 绑定结果 -->
+<div class="row mb-4" id="result-content" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-check-circle me-2"></i>绑定结果
+            </div>
+            <div class="card-body">
+                <div id="bindingResult"></div>
+                <div class="text-center mt-3">
+                    <button class="btn btn-primary" onclick="resetBinding()">
+                        <i class="fas fa-plus me-2"></i>绑定新设备
+                    </button>
+                    <button class="btn btn-outline-primary ms-2" onclick="goToAgents()">
+                        <i class="fas fa-robot me-2"></i>查看Agent列表
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .step-item {
+        text-align: center;
+        padding: 1rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .step-item.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .step-item.completed {
+        background: #28a745;
+        color: white;
+    }
+    
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin: 0 auto 0.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .step-item.active .step-number {
+        background: white;
+        color: #667eea;
+    }
+    
+    .step-item.completed .step-number {
+        background: white;
+        color: #28a745;
+    }
+    
+    .step-title {
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 2rem;
+    }
+    
+    .spinner-border {
+        color: #667eea;
+    }
+    
+    /* 表格选择样式 */
+    .table tbody tr {
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .table tbody tr:hover {
+        background-color: rgba(102, 126, 234, 0.1);
+    }
+    
+    .table tbody tr.selected {
+        background-color: rgba(102, 126, 234, 0.2);
+        border-left: 3px solid #667eea;
+    }
+    
+    .form-check-input:checked {
+        background-color: #667eea;
+        border-color: #667eea;
+    }
+    
+    .form-check-input:focus {
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    /* 徽章样式 */
+    .badge {
+        font-size: 0.75rem;
+    }
+    
+    .text-pink {
+        color: #e91e63 !important;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentStep = 1;
+    let deviceData = null;
+    let userData = null;
+    let templateData = null;
+    let users = [];
+    let templates = [];
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('页面加载完成，初始化...');
+        updateStepDisplay();
+        setupStepNavigation();
+    });
+
+    // 设置步骤导航点击事件
+    function setupStepNavigation() {
+        for (let i = 1; i <= 4; i++) {
+            const stepElement = document.getElementById(`step${i}`);
+            stepElement.addEventListener('click', function() {
+                goToStep(i);
+            });
+        }
+    }
+
+    // 更新步骤显示
+    function updateStepDisplay() {
+        // 更新步骤状态
+        for (let i = 1; i <= 4; i++) {
+            const stepElement = document.getElementById(`step${i}`);
+            if (i < currentStep) {
+                stepElement.classList.add('completed');
+                stepElement.classList.remove('active');
+            } else if (i === currentStep) {
+                stepElement.classList.add('active');
+                stepElement.classList.remove('completed');
+            } else {
+                stepElement.classList.remove('active', 'completed');
+            }
+        }
+        
+        // 显示/隐藏内容
+        for (let i = 1; i <= 4; i++) {
+            const contentElement = document.getElementById(`step${i}-content`);
+            if (i === currentStep) {
+                contentElement.style.display = 'block';
+            } else {
+                contentElement.style.display = 'none';
+            }
+        }
+    }
+
+    // 跳转到指定步骤
+    function goToStep(step) {
+        if (step >= 1 && step <= 4) {
+            currentStep = step;
+            updateStepDisplay();
+            
+            // 如果跳转到步骤2且用户列表为空，自动加载用户
+            if (step === 2 && users.length === 0) {
+                loadUsers();
+            }
+            // 如果跳转到步骤3且模板列表为空，自动加载模板
+            if (step === 3 && templates.length === 0) {
+                console.log('自动加载模板列表...');
+                loadTemplates();
+            }
+        }
+    }
+
+    // 下一步
+    function nextStep() {
+        if (currentStep < 4) {
+            currentStep++;
+            if (currentStep === 4) {
+                showConfirmInfo();
+            }
+            updateStepDisplay();
+            
+            // 如果跳转到步骤2且用户列表为空，自动加载用户
+            if (currentStep === 2 && users.length === 0) {
+                loadUsers();
+            }
+            // 如果跳转到步骤3且模板列表为空，自动加载模板
+            if (currentStep === 3 && templates.length === 0) {
+                console.log('自动加载模板列表...');
+                loadTemplates();
+            }
+        }
+        hideLoading();
+    }
+
+    // 检查设备
+    async function checkDevice() {
+        const deviceUuid = document.getElementById('deviceUuid').value.trim();
+        if (!deviceUuid) {
+            alert('请输入设备UUID');
+            return;
+        }
+
+        try {
+            showLoading('正在检查设备...');
+            
+            const response = await fetch(`/admin/api/devices/check/${encodeURIComponent(deviceUuid)}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                deviceData = result.data;
+                displayDeviceInfo();
+                
+                // 检查设备是否已绑定
+                if (deviceData.exists && deviceData.binding_status === 1) {
+                    showError('设备已被绑定，无法继续操作。请选择其他设备或联系管理员。');
+                    return;
+                }
+                
+                // 只有设备不存在或未绑定时才进入下一步
+                nextStep();
+            } else {
+                showError('检查设备失败: ' + result.error);
+            }
+        } catch (error) {
+            showError('检查设备失败: ' + error.message);
+        }
+    }
+
+    // 显示设备信息
+    function displayDeviceInfo() {
+        const deviceInfo = document.getElementById('deviceInfo');
+        const deviceDetails = document.getElementById('deviceDetails');
+        const newDeviceInfo = document.getElementById('newDeviceInfo');
+        
+        if (deviceData.exists) {
+            const bindingStatus = deviceData.binding_status === 1 ? '已绑定' : '未绑定';
+            const statusClass = deviceData.binding_status === 1 ? 'text-danger' : 'text-success';
+            
+            deviceDetails.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>设备名称:</strong> ${deviceData.name}<br>
+                        <strong>设备类型:</strong> ${getDeviceTypeName(deviceData.device_type)}<br>
+                        <strong>绑定状态:</strong> <span class="${statusClass}">${bindingStatus}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>电量:</strong> ${deviceData.battery}%<br>
+                        <strong>音量:</strong> ${deviceData.volume}%<br>
+                        <strong>最后活跃:</strong> ${deviceData.last_active || '从未'}
+                    </div>
+                </div>
+            `;
+            deviceInfo.style.display = 'block';
+            newDeviceInfo.style.display = 'none';
+        } else {
+            deviceInfo.style.display = 'none';
+            newDeviceInfo.style.display = 'block';
+        }
+    }
+
+    // 获取设备类型名称
+    function getDeviceTypeName(type) {
+        const types = {
+            0: '其他',
+            1: '智能音箱',
+            2: '智能显示屏',
+            3: '机器人',
+            4: '车载设备',
+            5: '可穿戴设备'
+        };
+        return types[type] || '未知';
+    }
+
+    // 加载用户列表
+    async function loadUsers() {
+        try {
+            showLoading('正在加载用户列表...');
+            
+            const response = await fetch('/admin/api/users');
+            const result = await response.json();
+            
+            if (result.success) {
+                users = result.data;
+                populateUserSelect();
+                hideLoading();
+            } else {
+                showError('加载用户列表失败: ' + result.error);
+            }
+        } catch (error) {
+            showError('加载用户列表失败: ' + error.message);
+        }
+    }
+
+    // 填充用户表格
+    function populateUserSelect() {
+        const usersTable = document.getElementById('usersTable');
+        
+        if (users.length === 0) {
+            usersTable.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center text-muted">
+                        <i class="fas fa-users me-2"></i>暂无用户数据
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        usersTable.innerHTML = '';
+        users.forEach(user => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <input type="radio" name="userSelect" value="${user.id}" class="form-check-input" onchange="handleUserSelect(${user.id})">
+                </td>
+                <td>${user.id}</td>
+                <td>${user.user_name}</td>
+                <td>${user.login_name}</td>
+                <td>${user.mobile || '-'}</td>
+                <td>
+                    <span class="badge ${user.user_type === 1 ? 'bg-warning' : 'bg-primary'}">
+                        ${user.user_type === 1 ? '系统用户' : '普通用户'}
+                    </span>
+                </td>
+                <td>
+                    <span class="badge ${user.status === 1 ? 'bg-success' : 'bg-danger'}">
+                        ${user.status === 1 ? '正常' : '禁用'}
+                    </span>
+                </td>
+                <td>${new Date(user.created_at).toLocaleDateString()}</td>
+            `;
+            
+            // 添加行点击事件
+            row.addEventListener('click', function(e) {
+                if (e.target.type !== 'radio') {
+                    const radio = row.querySelector('input[type="radio"]');
+                    radio.checked = true;
+                    handleUserSelect(user.id);
+                }
+            });
+            
+            usersTable.appendChild(row);
+        });
+    }
+
+    // 处理用户选择
+    function handleUserSelect(userId) {
+        if (userId) {
+            // 移除其他行的选中状态
+            document.querySelectorAll('#usersTable tr').forEach(row => {
+                row.classList.remove('selected');
+            });
+            
+            // 高亮当前选中的行
+            const selectedRow = document.querySelector(`input[value="${userId}"]`).closest('tr');
+            selectedRow.classList.add('selected');
+            
+            const selectedUser = users.find(u => u.id == userId);
+            displayUserInfo(selectedUser);
+            // 用户选择后自动进入下一步
+            nextStep();
+        } else {
+            document.getElementById('userInfo').style.display = 'none';
+        }
+    }
+
+    // 显示用户信息
+    function displayUserInfo(user) {
+        userData = user;
+        const userInfo = document.getElementById('userInfo');
+        const userDetails = document.getElementById('userDetails');
+        
+        userDetails.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>用户名:</strong> ${user.user_name}<br>
+                    <strong>登录名:</strong> ${user.login_name}<br>
+                    <strong>手机号:</strong> ${user.mobile || '未设置'}
+                </div>
+                <div class="col-md-6">
+                    <strong>用户类型:</strong> ${user.user_type === 1 ? '系统用户' : '普通用户'}<br>
+                    <strong>状态:</strong> ${user.status === 1 ? '正常' : '禁用'}<br>
+                    <strong>注册时间:</strong> ${new Date(user.created_at).toLocaleString()}
+                </div>
+            </div>
+        `;
+        userInfo.style.display = 'block';
+    }
+
+    // 加载模板列表
+    async function loadTemplates() {
+        try {
+            console.log('开始加载模板列表...');
+            showLoading('正在加载Agent模板列表...');
+            
+            const response = await fetch('/admin/api/agent-templates');
+            const result = await response.json();
+            
+            console.log('模板列表响应:', result);
+            
+            if (result.success) {
+                templates = result.data;
+                console.log('模板数据:', templates);
+                populateTemplateSelect();
+                hideLoading();
+            } else {
+                showError('加载Agent模板列表失败: ' + result.error);
+            }
+        } catch (error) {
+            console.error('加载模板列表错误:', error);
+            showError('加载Agent模板列表失败: ' + error.message);
+        }
+    }
+
+    // 填充模板表格
+    function populateTemplateSelect() {
+        console.log('填充模板表格，模板数量:', templates.length);
+        const templatesTable = document.getElementById('templatesTable');
+        
+        if (templates.length === 0) {
+            templatesTable.innerHTML = `
+                <tr>
+                    <td colspan="9" class="text-center text-muted">
+                        <i class="fas fa-robot me-2"></i>暂无模板数据
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        templatesTable.innerHTML = '';
+        templates.forEach(template => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <input type="radio" name="templateSelect" value="${template.id}" class="form-check-input" onchange="handleTemplateSelect(${template.id})">
+                </td>
+                <td>${template.id}</td>
+                <td>${template.name}</td>
+                <td>
+                    <span class="badge bg-info">${getDeviceTypeName(template.device_type)}</span>
+                </td>
+                <td>
+                    <i class="fas ${template.gender === 1 ? 'fa-male text-primary' : 'fa-female text-pink'}"></i>
+                    ${template.gender === 1 ? '男' : '女'}
+                </td>
+                <td>${template.description || '-'}</td>
+                <td>
+                    <span class="badge ${template.creator_id === 0 ? 'bg-secondary' : 'bg-primary'}">
+                        ${template.creator_id === 0 ? '系统' : '用户'}
+                    </span>
+                </td>
+                <td>
+                    <span class="badge ${template.status === 1 ? 'bg-success' : 'bg-danger'}">
+                        ${template.status === 1 ? '正常' : '禁用'}
+                    </span>
+                </td>
+                <td>${new Date(template.created_at).toLocaleDateString()}</td>
+            `;
+            
+            // 添加行点击事件
+            row.addEventListener('click', function(e) {
+                if (e.target.type !== 'radio') {
+                    const radio = row.querySelector('input[type="radio"]');
+                    radio.checked = true;
+                    handleTemplateSelect(template.id);
+                }
+            });
+            
+            templatesTable.appendChild(row);
+        });
+    }
+
+    // 处理模板选择
+    function handleTemplateSelect(templateId) {
+        if (templateId) {
+            // 移除其他行的选中状态
+            document.querySelectorAll('#templatesTable tr').forEach(row => {
+                row.classList.remove('selected');
+            });
+            
+            // 高亮当前选中的行
+            const selectedRow = document.querySelector(`input[value="${templateId}"]`).closest('tr');
+            selectedRow.classList.add('selected');
+            
+            const selectedTemplate = templates.find(t => t.id == templateId);
+            displayTemplateInfo(selectedTemplate);
+            // 模板选择后自动进入下一步
+            nextStep();
+        } else {
+            document.getElementById('templateInfo').style.display = 'none';
+        }
+    }
+
+    // 显示模板信息
+    function displayTemplateInfo(template) {
+        templateData = template;
+        const templateInfo = document.getElementById('templateInfo');
+        const templateDetails = document.getElementById('templateDetails');
+        
+        templateDetails.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>模板名称:</strong> ${template.name}<br>
+                    <strong>设备类型:</strong> ${getDeviceTypeName(template.device_type)}<br>
+                    <strong>性别:</strong> ${template.gender === 1 ? '男' : '女'}
+                </div>
+                <div class="col-md-6">
+                    <strong>描述:</strong> ${template.description || '无'}<br>
+                    <strong>创建者:</strong> ${template.creator_id === 0 ? '系统' : '用户'}<br>
+                    <strong>状态:</strong> ${template.status === 1 ? '正常' : '禁用'}
+                </div>
+            </div>
+        `;
+        templateInfo.style.display = 'block';
+    }
+
+    // 显示确认信息
+    function showConfirmInfo() {
+        document.getElementById('confirmDeviceUuid').textContent = deviceData.device_uuid || document.getElementById('deviceUuid').value;
+        document.getElementById('confirmDeviceName').textContent = deviceData.name || document.getElementById('deviceName').value || '设备-' + (deviceData.device_uuid || document.getElementById('deviceUuid').value).substring(0, 8);
+        document.getElementById('confirmDeviceType').textContent = getDeviceTypeName(deviceData.device_type || parseInt(document.getElementById('deviceType').value));
+        document.getElementById('confirmUserName').textContent = userData.user_name;
+        document.getElementById('confirmTemplateName').textContent = templateData.name;
+    }
+
+    // 执行绑定
+    async function executeBinding() {
+        try {
+            showLoading('正在执行设备绑定...');
+            
+            const bindingData = {
+                device_uuid: deviceData.device_uuid || document.getElementById('deviceUuid').value,
+                user_id: userData.id,
+                template_id: templateData.id,
+                device_name: deviceData.name || document.getElementById('deviceName').value,
+                device_type: deviceData.device_type || parseInt(document.getElementById('deviceType').value)
+            };
+            
+            const response = await fetch('/admin/api/devices/bind', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(bindingData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showBindingResult(result.data, true);
+            } else {
+                showError('设备绑定失败: ' + result.error);
+            }
+        } catch (error) {
+            showError('设备绑定失败: ' + error.message);
+        }
+    }
+
+    // 显示绑定结果
+    function showBindingResult(data, success) {
+        const resultContent = document.getElementById('result-content');
+        const bindingResult = document.getElementById('bindingResult');
+        
+        if (success) {
+            bindingResult.innerHTML = `
+                <div class="alert alert-success">
+                    <h5><i class="fas fa-check-circle me-2"></i>绑定成功！</h5>
+                    <p><strong>设备ID:</strong> ${data.device_id}</p>
+                    <p><strong>Agent ID:</strong> ${data.agent_id}</p>
+                    <p><strong>Agent名称:</strong> ${data.agent_name}</p>
+                    <p><strong>消息:</strong> ${data.message}</p>
+                </div>
+            `;
+        } else {
+            bindingResult.innerHTML = `
+                <div class="alert alert-danger">
+                    <h5><i class="fas fa-exclamation-circle me-2"></i>绑定失败</h5>
+                    <p>${data}</p>
+                </div>
+            `;
+        }
+        
+        resultContent.style.display = 'block';
+        hideLoading();
+    }
+
+    // 重置绑定流程
+    function resetBinding() {
+        currentStep = 1;
+        deviceData = null;
+        userData = null;
+        templateData = null;
+        
+        // 清空表单
+        document.getElementById('deviceUuid').value = '';
+        document.getElementById('deviceName').value = '';
+        document.getElementById('deviceType').value = '1';
+        document.getElementById('userSelect').value = '';
+        document.getElementById('templateSelect').value = '';
+        
+        // 隐藏信息显示
+        document.getElementById('deviceInfo').style.display = 'none';
+        document.getElementById('newDeviceInfo').style.display = 'none';
+        document.getElementById('userInfo').style.display = 'none';
+        document.getElementById('templateInfo').style.display = 'none';
+        document.getElementById('result-content').style.display = 'none';
+        
+        updateStepDisplay();
+    }
+
+    // 跳转到Agent列表
+    function goToAgents() {
+        window.location.href = '/admin/agents';
+    }
+
+
+    // 显示加载状态
+    function showLoading(message) {
+        // 这里可以添加加载动画
+        console.log(message);
+    }
+
+    // 隐藏加载状态
+    function hideLoading() {
+        // 这里可以隐藏加载动画
+    }
+
+    // 显示错误信息
+    function showError(message) {
+        // 创建错误提示框
+        const errorAlert = document.createElement('div');
+        errorAlert.className = 'alert alert-danger alert-dismissible fade show';
+        errorAlert.innerHTML = `
+            <i class="fas fa-exclamation-circle me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // 插入到页面顶部
+        const contentWrapper = document.querySelector('.content-wrapper');
+        if (contentWrapper) {
+            contentWrapper.insertBefore(errorAlert, contentWrapper.firstChild);
+        }
+        
+        // 3秒后自动消失
+        setTimeout(() => {
+            if (errorAlert.parentNode) {
+                errorAlert.remove();
+            }
+        }, 5000);
+        
+        hideLoading();
+    }
+</script>
+{% endblock %}

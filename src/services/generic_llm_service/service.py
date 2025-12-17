@@ -19,7 +19,8 @@ from src.utcp.streaming import StreamResponse, LocalStreamResponse, StreamType, 
 from src.common.utils.llm_stream_utils import (
     process_openai_stream,
     estimate_tokens_from_messages,
-    estimate_tokens_from_text
+    estimate_tokens_from_text,
+    create_default_token_estimator
 )
 
 logger = logging.getLogger(__name__)
@@ -467,10 +468,12 @@ class GenericLLMService(UTCPService):
             merged_extra_params.update(call_extra_params)
             logger.debug(f"合并调用时扩展参数: {call_extra_params}")
         
-        # 将合并后的扩展参数添加到请求中
+        # 将合并后的扩展参数通过 extra_body 传递（用于不支持的参数如 thinking）
+        # 注意：thinking 参数用于启用思维链功能，响应中会包含 thinking 字段作为输出内容
+        # 这些参数会被添加到请求体中，而不是作为顶层参数
         if merged_extra_params:
             logger.debug(f"最终扩展参数: {merged_extra_params}")
-            request_params.update(merged_extra_params)
+            request_params["extra_body"] = merged_extra_params
         
         # 添加工具参数（如果支持且提供）
         if self.support_tools:
@@ -546,7 +549,6 @@ class GenericLLMService(UTCPService):
         
         raise last_error
     
-    @handle_llm_errors
     async def _chat_completion_stream(self, arguments: Dict[str, Any]) -> StreamResponse:
         """执行流式聊天完成"""
         messages = arguments.get("messages", [])
@@ -605,10 +607,12 @@ class GenericLLMService(UTCPService):
             merged_extra_params.update(call_extra_params)
             logger.debug(f"合并调用时扩展参数: {call_extra_params}")
         
-        # 将合并后的扩展参数添加到请求中
+        # 将合并后的扩展参数通过 extra_body 传递（用于不支持的参数如 thinking）
+        # 注意：thinking 参数用于启用思维链功能，响应中会包含 thinking 字段作为输出内容
+        # 这些参数会被添加到请求体中，而不是作为顶层参数
         if merged_extra_params:
             logger.debug(f"最终扩展参数: {merged_extra_params}")
-            request_params.update(merged_extra_params)
+            request_params["extra_body"] = merged_extra_params
         
         # 添加工具参数（如果支持且提供）
         tools = []
@@ -631,7 +635,7 @@ class GenericLLMService(UTCPService):
                 model,
                 messages,
                 tools,
-                estimate_tokens_func=estimate_tokens_from_messages if self.estimate_tokens else None
+                estimate_tokens_func=create_default_token_estimator() if self.estimate_tokens else None
             ):
                 yield chunk_data
         

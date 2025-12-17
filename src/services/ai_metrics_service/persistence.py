@@ -57,12 +57,9 @@ class DatabasePersistence:
         
         self._initialized = True
     
-    @require_initialized
-    @handle_persistence_errors
-    async def save_metrics(self, metrics: CallMetrics) -> None:
-        """保存指标数据到数据库"""
-        # 转换为数据库格式
-        metrics_data = {
+    def _metrics_to_dict(self, metrics: CallMetrics) -> Dict[str, Any]:
+        """将 CallMetrics 对象转换为数据库格式的字典"""
+        return {
             'monitor_id': metrics.monitor_id,
             'provider': metrics.provider,
             'model_name': metrics.model_name,
@@ -84,16 +81,54 @@ class DatabasePersistence:
             'first_token_time': metrics.first_token_time,
             'result': metrics.result
         }
+    
+    @require_initialized
+    @handle_persistence_errors
+    async def save_metrics(self, metrics: CallMetrics) -> None:
+        """保存指标数据到数据库（单条插入）"""
+        metrics_data = self._metrics_to_dict(metrics)
         
         # 构建SQL语句
         fields = ', '.join(metrics_data.keys())
         placeholders = ', '.join([f':{key}' for key in metrics_data.keys()])
         sql = f"INSERT INTO ai_metrics ({fields}) VALUES ({placeholders})"
         
-        # 执行插入
-        await self.db_manager.execute_update(sql, metrics_data)
+        # 使用 execute_insert 而不是 execute_update（更语义化，且可能性能更好）
+        await self.db_manager.execute_insert(sql, metrics_data)
         
         logger.debug(f"保存指标数据: {metrics.monitor_id}")
+    
+    @require_initialized
+    @handle_persistence_errors
+    async def save_metrics_batch(self, metrics_list: List[CallMetrics]) -> int:
+        """批量保存指标数据到数据库
+        
+        Args:
+            metrics_list: CallMetrics 对象列表
+            
+        Returns:
+            int: 成功插入的记录数
+        """
+        if not metrics_list:
+            return 0
+        
+        # 转换为数据库格式
+        metrics_data_list = [self._metrics_to_dict(metrics) for metrics in metrics_list]
+        
+        # 构建SQL语句（使用批量插入）
+        if not metrics_data_list:
+            return 0
+        
+        # 获取字段列表（所有记录应该有相同的字段）
+        fields = ', '.join(metrics_data_list[0].keys())
+        placeholders = ', '.join([f':{key}' for key in metrics_data_list[0].keys()])
+        sql = f"INSERT INTO ai_metrics ({fields}) VALUES ({placeholders})"
+        
+        # 使用批量操作执行插入
+        affected_rows = await self.db_manager.execute_many(sql, metrics_data_list)
+        
+        logger.debug(f"批量保存指标数据: {len(metrics_list)} 条记录，成功插入 {affected_rows} 条")
+        return affected_rows
     
     @require_initialized
     @handle_persistence_errors

@@ -79,9 +79,6 @@ class ChatRecordNode(Node):
     async def initialize(self, context):
         """初始化节点"""
         self._logger = get_logger(__name__)
-        
-        # 注册到全局上下文
-        context.set_global_var("chat_record_node", self)
         self.context = context
         
         # 加载全局配置

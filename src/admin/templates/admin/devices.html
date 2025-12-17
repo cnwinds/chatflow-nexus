@@ -1,0 +1,529 @@
+{% extends "admin/base.html" %}
+
+{% block title %}设备管理 - AI Toys 后台管理系统{% endblock %}
+
+{% block page_title %}设备管理{% endblock %}
+
+{% block content %}
+<!-- 搜索和筛选区域 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-search me-2"></i>搜索和筛选
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">设备UUID</label>
+                        <input type="text" class="form-control" id="searchDeviceUuid" placeholder="输入设备UUID">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">设备名称</label>
+                        <input type="text" class="form-control" id="searchName" placeholder="输入设备名称">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">设备类型</label>
+                        <select class="form-select" id="searchDeviceType">
+                            <option value="">全部类型</option>
+                            <option value="0">其他</option>
+                            <option value="1">智能音箱</option>
+                            <option value="2">智能显示屏</option>
+                            <option value="3">机器人</option>
+                            <option value="4">车载设备</option>
+                            <option value="5">可穿戴设备</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">状态</label>
+                        <select class="form-select" id="searchStatus">
+                            <option value="">全部状态</option>
+                            <option value="0">离线</option>
+                            <option value="1">在线</option>
+                            <option value="2">休眠</option>
+                            <option value="3">正在连接</option>
+                            <option value="4">故障</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-3">
+                        <label class="form-label">绑定状态</label>
+                        <select class="form-select" id="searchBindingStatus">
+                            <option value="">全部状态</option>
+                            <option value="0">等待绑定</option>
+                            <option value="1">绑定完成</option>
+                        </select>
+                    </div>
+                    <div class="col-md-9 d-flex align-items-end">
+                        <button class="btn btn-custom" onclick="applySearchFilter()">
+                            <i class="fas fa-search me-2"></i>搜索
+                        </button>
+                        <button class="btn btn-outline-secondary ms-2" onclick="resetSearch()">
+                            <i class="fas fa-undo me-2"></i>重置
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 设备列表 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-mobile-alt me-2"></i>设备列表
+                    <span class="badge bg-primary ms-2" id="deviceCount">0</span>
+                </div>
+                <button class="btn btn-sm btn-outline-primary" onclick="loadDevices()">
+                    <i class="fas fa-sync-alt me-1"></i>刷新
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>设备UUID</th>
+                                <th>设备名称</th>
+                                <th>设备类型</th>
+                                <th>状态</th>
+                                <th>绑定状态</th>
+                                <th>电量</th>
+                                <th>音量</th>
+                                <th>IP</th>
+                                <th>信号强度</th>
+                                <th>最后活跃</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="devicesTable">
+                            <tr>
+                                <td colspan="13" class="text-center">
+                                    <div class="loading">
+                                        <div class="spinner-border" role="status"></div>
+                                        <div class="mt-2">加载中...</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 设备详情弹窗 -->
+<div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailModalLabel">
+                    <i class="fas fa-mobile-alt me-2"></i>设备详情
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>设备ID:</strong> <span id="detailId"></span><br>
+                        <strong>设备UUID:</strong> <span id="detailDeviceUuid"></span><br>
+                        <strong>设备名称:</strong> <span id="detailName"></span><br>
+                        <strong>设备类型:</strong> <span id="detailDeviceType"></span><br>
+                        <strong>状态:</strong> <span id="detailStatus"></span><br>
+                        <strong>绑定状态:</strong> <span id="detailBindingStatus"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>电量:</strong> <span id="detailBattery"></span><br>
+                        <strong>音量:</strong> <span id="detailVolume"></span><br>
+                        <strong>IP地址:</strong> <span id="detailIp"></span><br>
+                        <strong>信号强度:</strong> <span id="detailSignalStrength"></span><br>
+                        <strong>创建时间:</strong> <span id="detailCreatedAt"></span><br>
+                        <strong>最后活跃:</strong> <span id="detailLastActive"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-custom" onclick="showDeviceUsers()">
+                    <i class="fas fa-users me-2"></i>查看关联用户
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 设备关联用户弹窗 -->
+<div class="modal fade" id="usersModal" tabindex="-1" aria-labelledby="usersModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="usersModalLabel">
+                    <i class="fas fa-users me-2"></i>设备关联用户
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>用户ID</th>
+                                <th>头像</th>
+                                <th>登录名</th>
+                                <th>用户名</th>
+                                <th>手机号</th>
+                                <th>用户类型</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deviceUsersTable">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentDevices = [];
+    let currentDeviceId = null;
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        loadDevices();
+        setupSearchEvents();
+    });
+
+    // 设置搜索事件监听
+    function setupSearchEvents() {
+        // 为所有搜索输入框添加实时搜索
+        const searchInputs = ['searchDeviceUuid', 'searchName', 'searchDeviceType', 'searchStatus', 'searchBindingStatus'];
+        searchInputs.forEach(inputId => {
+            const element = document.getElementById(inputId);
+            if (element) {
+                element.addEventListener('input', function() {
+                    // 延迟搜索，避免频繁触发
+                    clearTimeout(this.searchTimeout);
+                    this.searchTimeout = setTimeout(() => {
+                        applySearchFilter();
+                    }, 300);
+                });
+            }
+        });
+    }
+
+    // 加载设备列表
+    async function loadDevices() {
+        try {
+            showLoading();
+            
+            const response = await fetch('/admin/api/devices');
+            const result = await response.json();
+            
+            if (result.success) {
+                currentDevices = result.data;
+                // 应用当前搜索条件
+                applySearchFilter();
+            } else {
+                console.error('加载设备失败:', result.error);
+                showError('加载设备失败: ' + result.error);
+            }
+        } catch (error) {
+            console.error('加载设备失败:', error);
+            showError('加载设备失败，请重试');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    // 应用搜索过滤
+    function applySearchFilter() {
+        const searchDeviceUuid = document.getElementById('searchDeviceUuid').value.trim().toLowerCase();
+        const searchName = document.getElementById('searchName').value.trim().toLowerCase();
+        const searchDeviceType = document.getElementById('searchDeviceType').value;
+        const searchStatus = document.getElementById('searchStatus').value;
+        const searchBindingStatus = document.getElementById('searchBindingStatus').value;
+        
+        let filteredDevices = currentDevices.filter(device => {
+            // 设备UUID过滤
+            if (searchDeviceUuid && !device.device_uuid.toLowerCase().includes(searchDeviceUuid)) {
+                return false;
+            }
+            
+            // 设备名称过滤
+            if (searchName && !device.name.toLowerCase().includes(searchName)) {
+                return false;
+            }
+            
+            // 设备类型过滤
+            if (searchDeviceType && device.device_type.toString() !== searchDeviceType) {
+                return false;
+            }
+            
+            // 状态过滤
+            if (searchStatus && device.status.toString() !== searchStatus) {
+                return false;
+            }
+            
+            // 绑定状态过滤
+            if (searchBindingStatus && device.binding_status.toString() !== searchBindingStatus) {
+                return false;
+            }
+            
+            return true;
+        });
+        
+        updateDevicesTable(filteredDevices);
+        document.getElementById('deviceCount').textContent = filteredDevices.length;
+    }
+
+    // 更新设备表格
+    function updateDevicesTable(devices) {
+        const tbody = document.getElementById('devicesTable');
+        tbody.innerHTML = '';
+        
+        if (devices.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="13" class="text-center text-muted">暂无数据</td></tr>';
+            return;
+        }
+        
+        devices.forEach(device => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${device.id}</td>
+                <td><code>${device.device_uuid}</code></td>
+                <td>${device.name}</td>
+                <td>${getDeviceTypeText(device.device_type)}</td>
+                <td>
+                    <span class="badge ${getStatusBadgeClass(device.status)}">
+                        ${getStatusText(device.status)}
+                    </span>
+                </td>
+                <td>
+                    <span class="badge ${device.binding_status === 1 ? 'bg-success' : 'bg-warning'}">
+                        ${device.binding_status === 1 ? '绑定完成' : '等待绑定'}
+                    </span>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="progress" style="width: 60px; height: 8px;">
+                            <div class="progress-bar ${getBatteryColor(device.battery)}" style="width: ${device.battery}%"></div>
+                        </div>
+                        <small class="ms-2">${device.battery}%</small>
+                    </div>
+                </td>
+                <td>${device.volume}%</td>
+                <td>${device.ip || '-'}</td>
+                <td>
+                    ${device.signal_strength !== null ? 
+                        `<div class="d-flex align-items-center">
+                            <div class="progress" style="width: 60px; height: 8px;">
+                                <div class="progress-bar ${getSignalColor(device.signal_strength)}" style="width: ${device.signal_strength}%"></div>
+                            </div>
+                            <small class="ms-2">${device.signal_strength}%</small>
+                        </div>` : '-'
+                    }
+                </td>
+                <td>${device.last_active ? new Date(device.last_active).toLocaleString() : '-'}</td>
+                <td>${device.created_at ? new Date(device.created_at).toLocaleString() : '-'}</td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-info" onclick="showDeviceDetail(${device.id})" title="查看详情">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="showDeviceUsers(${device.id})" title="查看关联用户">
+                            <i class="fas fa-users"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // 显示设备详情
+    async function showDeviceDetail(deviceId) {
+        try {
+            const response = await fetch(`/admin/api/devices/${deviceId}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                const device = result.data;
+                document.getElementById('detailId').textContent = device.id;
+                document.getElementById('detailDeviceUuid').textContent = device.device_uuid;
+                document.getElementById('detailName').textContent = device.name;
+                document.getElementById('detailDeviceType').textContent = getDeviceTypeText(device.device_type);
+                document.getElementById('detailStatus').textContent = getStatusText(device.status);
+                document.getElementById('detailBindingStatus').textContent = device.binding_status === 1 ? '绑定完成' : '等待绑定';
+                document.getElementById('detailBattery').textContent = device.battery + '%';
+                document.getElementById('detailVolume').textContent = device.volume + '%';
+                document.getElementById('detailIp').textContent = device.ip || '-';
+                document.getElementById('detailSignalStrength').textContent = device.signal_strength !== null ? device.signal_strength + '%' : '-';
+                document.getElementById('detailCreatedAt').textContent = device.created_at ? new Date(device.created_at).toLocaleString() : '-';
+                document.getElementById('detailLastActive').textContent = device.last_active ? new Date(device.last_active).toLocaleString() : '-';
+                
+                currentDeviceId = deviceId;
+                
+                const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+                modal.show();
+            } else {
+                showError('获取设备详情失败: ' + result.error);
+            }
+        } catch (error) {
+            console.error('获取设备详情失败:', error);
+            showError('获取设备详情失败，请重试');
+        }
+    }
+
+    // 显示设备关联用户
+    async function showDeviceUsers(deviceId = null) {
+        if (deviceId) {
+            currentDeviceId = deviceId;
+        }
+        
+        try {
+            const response = await fetch(`/admin/api/devices/${currentDeviceId}/users`);
+            const result = await response.json();
+            
+            if (result.success) {
+                const users = result.data;
+                const tbody = document.getElementById('deviceUsersTable');
+                tbody.innerHTML = '';
+                
+                if (users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">暂无关联用户</td></tr>';
+                } else {
+                    users.forEach(user => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${user.id}</td>
+                            <td>
+                                ${user.avatar ? `<img src="${user.avatar}" class="rounded-circle" width="32" height="32" alt="头像">` : '<i class="fas fa-user-circle text-muted" style="font-size: 32px;"></i>'}
+                            </td>
+                            <td>${user.login_name}</td>
+                            <td>${user.user_name}</td>
+                            <td>${user.mobile || '-'}</td>
+                            <td>
+                                <span class="badge ${user.user_type === 1 ? 'bg-warning' : 'bg-info'}">
+                                    ${user.user_type === 1 ? '系统用户' : '普通用户'}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge ${user.status === 1 ? 'bg-success' : 'bg-danger'}">
+                                    ${user.status === 1 ? '正常' : '禁用'}
+                                </span>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+                
+                const modal = new bootstrap.Modal(document.getElementById('usersModal'));
+                modal.show();
+            } else {
+                showError('获取设备关联用户失败: ' + result.error);
+            }
+        } catch (error) {
+            console.error('获取设备关联用户失败:', error);
+            showError('获取设备关联用户失败，请重试');
+        }
+    }
+
+    // 获取设备类型文本
+    function getDeviceTypeText(type) {
+        const types = {
+            0: '其他',
+            1: '智能音箱',
+            2: '智能显示屏',
+            3: '机器人',
+            4: '车载设备',
+            5: '可穿戴设备'
+        };
+        return types[type] || '未知';
+    }
+
+    // 获取状态文本
+    function getStatusText(status) {
+        const statuses = {
+            0: '离线',
+            1: '在线',
+            2: '休眠',
+            3: '正在连接',
+            4: '故障'
+        };
+        return statuses[status] || '未知';
+    }
+
+    // 获取状态徽章样式
+    function getStatusBadgeClass(status) {
+        const classes = {
+            0: 'bg-secondary',
+            1: 'bg-success',
+            2: 'bg-warning',
+            3: 'bg-info',
+            4: 'bg-danger'
+        };
+        return classes[status] || 'bg-secondary';
+    }
+
+    // 获取电量颜色
+    function getBatteryColor(battery) {
+        if (battery > 50) return 'bg-success';
+        if (battery > 20) return 'bg-warning';
+        return 'bg-danger';
+    }
+
+    // 获取信号强度颜色
+    function getSignalColor(signal) {
+        if (signal > 70) return 'bg-success';
+        if (signal > 30) return 'bg-warning';
+        return 'bg-danger';
+    }
+
+    // 重置搜索
+    function resetSearch() {
+        document.getElementById('searchDeviceUuid').value = '';
+        document.getElementById('searchName').value = '';
+        document.getElementById('searchDeviceType').value = '';
+        document.getElementById('searchStatus').value = '';
+        document.getElementById('searchBindingStatus').value = '';
+        applySearchFilter();
+    }
+
+    // 显示加载状态
+    function showLoading() {
+        const tbody = document.getElementById('devicesTable');
+        tbody.innerHTML = '<tr><td colspan="13" class="text-center"><div class="loading"><div class="spinner-border" role="status"></div><div class="mt-2">加载中...</div></div></td></tr>';
+    }
+
+    // 隐藏加载状态
+    function hideLoading() {
+        // 加载状态会在updateDevicesTable中被替换
+    }
+
+    // 显示成功消息
+    function showSuccess(message) {
+        // 简单的成功提示，可以后续优化为Toast
+        alert('✅ ' + message);
+    }
+
+    // 显示错误消息
+    function showError(message) {
+        // 简单的错误提示，可以后续优化为Toast
+        alert('❌ ' + message);
+    }
+</script>
+{% endblock %}

@@ -11,6 +11,7 @@ import time
 import uuid
 from typing import List, Dict, Any, Optional, Callable
 from functools import wraps
+from collections import deque
 
 from src.utcp.utcp import UTCPService
 from src.common import ConfigManager
@@ -75,6 +76,15 @@ class AIMetricsService(UTCPService):
         
         # 简单的会话存储（替代collector）
         self._active_sessions: Dict[str, Dict[str, Any]] = {}
+        
+        # 批量插入队列配置
+        batch_config = self.service_config.get("batch_insert", {})
+        self._batch_size = batch_config.get("batch_size", 10)  # 默认每批10条
+        self._batch_timeout = batch_config.get("batch_timeout", 5.0)  # 默认5秒超时
+        self._metrics_queue: deque = deque()
+        self._last_batch_time = time.time()
+        self._batch_task: Optional[asyncio.Task] = None
+        self._queue_lock = asyncio.Lock()
     
     @property
     def name(self) -> str:
@@ -290,8 +300,8 @@ class AIMetricsService(UTCPService):
         metrics.input_cost = input_cost
         metrics.output_cost = output_cost
         
-        # 异步保存到数据库（不等待）
-        asyncio.create_task(self._save_metrics_async(metrics))
+        # 添加到批量插入队列（不阻塞）
+        asyncio.create_task(self._add_to_batch_queue(metrics))
         
         self.logger.debug(f"📊 指标数据已提交保存: "
                         f"total_time={metrics.total_time:.2f}ms, "
@@ -375,9 +385,88 @@ class AIMetricsService(UTCPService):
             await self.data_persistence.initialize()
             self._db_initialized = True
     
-    async def _save_metrics_async(self, metrics):
-        """异步保存指标数据（不阻塞主流程）"""
+    async def _add_to_batch_queue(self, metrics: CallMetrics):
+        """将指标添加到批量插入队列"""
+        should_flush = False
+        should_start_timer = False
+        
+        async with self._queue_lock:
+            self._metrics_queue.append(metrics)
+            
+            # 如果队列达到批量大小，立即触发批量保存
+            if len(self._metrics_queue) >= self._batch_size:
+                should_flush = True
+            else:
+                # 需要启动或重置定时器任务
+                should_start_timer = True
+        
+        # 在锁外执行批量保存和定时器操作
+        if should_flush:
+            await self._flush_batch_queue()
+        elif should_start_timer:
+            # 启动或重置定时器任务（在锁外执行，避免死锁）
+            self._start_batch_timer()
+    
+    def _start_batch_timer(self):
+        """启动批量保存定时器（非阻塞）"""
+        # 取消之前的任务
+        if self._batch_task and not self._batch_task.done():
+            self._batch_task.cancel()
+        
+        # 创建新的定时任务
+        self._batch_task = asyncio.create_task(self._batch_timer_task())
+    
+    async def _batch_timer_task(self):
+        """批量保存定时器任务"""
         try:
+            await asyncio.sleep(self._batch_timeout)
+            # 检查队列是否还有数据需要保存
+            async with self._queue_lock:
+                if self._metrics_queue:
+                    await self._flush_batch_queue()
+        except asyncio.CancelledError:
+            # 任务被取消是正常的（当队列达到批量大小时）
+            pass
+    
+    async def _flush_batch_queue(self):
+        """刷新批量队列，执行批量插入"""
+        # 在锁内取出队列数据
+        async with self._queue_lock:
+            if not self._metrics_queue:
+                return
+            
+            # 取出队列中的所有指标
+            metrics_list = list(self._metrics_queue)
+            self._metrics_queue.clear()
+            self._last_batch_time = time.time()
+            
+            # 取消定时器任务（如果还在运行）
+            if self._batch_task and not self._batch_task.done():
+                self._batch_task.cancel()
+                self._batch_task = None
+        
+        # 在锁外执行批量保存（避免长时间持有锁）
+        try:
+            await self._ensure_db_initialized()
+            saved_count = await self.data_persistence.save_metrics_batch(metrics_list)
+            self.logger.debug(f"✅ 批量保存指标数据成功: {saved_count}/{len(metrics_list)} 条记录")
+        except Exception as e:
+            self.logger.error(f"❌ 批量保存指标数据失败: {e}", exc_info=True)
+            # 如果批量保存失败，尝试单条保存（降级策略）
+            for metrics in metrics_list:
+                try:
+                    await self.data_persistence.save_metrics(metrics)
+                except Exception as single_error:
+                    self.logger.error(f"❌ 单条保存指标数据失败: monitor_id={metrics.monitor_id}, error={single_error}")
+    
+    async def flush_pending_metrics(self):
+        """刷新待保存的指标数据（用于服务关闭时调用）"""
+        await self._flush_batch_queue()
+    
+    async def _save_metrics_async(self, metrics):
+        """异步保存指标数据（不阻塞主流程）- 保留用于兼容性"""
+        try:
+            await self._ensure_db_initialized()
             await self.data_persistence.save_metrics(metrics)
             self.logger.debug(f"✅ 指标数据保存成功: monitor_id={metrics.monitor_id}")
         except Exception as e:

@@ -344,7 +344,7 @@ class LLMChat:
         """
         conversation_history = messages.copy()
         iteration_count = 0
-        
+        print("conversation_history=============================", messages)
         while iteration_count < max_iterations:
             try:
                 # 使用流式API调用，支持回调函数

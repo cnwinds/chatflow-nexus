@@ -9,15 +9,16 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@headlessui/react": "^1.7.17",
+    "@heroicons/react": "^2.1.1",
+    "@tailwindcss/typography": "^0.5.19",
+    "axios": "^1.6.2",
+    "highlight.js": "^11.9.0",
+    "marked": "^11.1.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.0",
-    "axios": "^1.6.2",
-    "zustand": "^4.4.7",
-    "@headlessui/react": "^1.7.17",
-    "@heroicons/react": "^2.1.1",
-    "marked": "^11.1.1",
-    "highlight.js": "^11.9.0"
+    "zustand": "^4.4.7"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",
@@ -35,4 +36,3 @@
     "vite": "^5.0.8"
   }
 }
-

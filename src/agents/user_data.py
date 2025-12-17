@@ -5,37 +5,43 @@
 
 import json
 from typing import Dict, Any, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from datetime import datetime, date
 from src.common.logging import get_logger
+from src.common.config import get_config_manager
+from src.common.config.constants import ConfigPaths
 
 
 @dataclass
 class Config:
     """配置类"""
+    data: Dict[str, Any] = field(default_factory=dict)
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Config':
         """从字典创建Config对象"""
-        return cls()
+        if not isinstance(data, dict):
+            data = {}
+        return cls(data=data.copy() if data else {})
     
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
-        return {}
+        return asdict(self)["data"]
 
 
 @dataclass
 class Memory:
     """记忆类"""
+    data: Dict[str, Any] = field(default_factory=dict)
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Memory':
         """从字典创建Memory对象"""
-        return cls()
+        return cls(data=data.copy() if data else {})
     
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
-        return {}
+        return asdict(self)["data"]
 
 
 class UserData:
@@ -107,8 +113,34 @@ class UserData:
             return 0
     
     def _get_merged_ai_providers(self) -> Dict[str, Any]:
-        """获取合并的AI提供者配置"""
-        return {}
+        """
+        获取合并后的 ai_providers 配置
+        
+        合并基础配置（chat.json）与用户配置（user_data），用户配置会覆盖基础配置
+        
+        Returns:
+            合并后的 ai_providers 配置字典
+        """
+        # 1. 获取基础配置（chat.json）
+        base_ai_providers = {}
+        try:
+            config_manager = get_config_manager()
+            base_ai_providers = config_manager.get_config(ConfigPaths.CHAT_AI_PROVIDERS) or {}
+            if not isinstance(base_ai_providers, dict):
+                base_ai_providers = {}
+        except Exception as e:
+            self.logger.warning(f"加载基础ai_providers配置失败: {str(e)}")
+            base_ai_providers = {}
+        
+        # 2. 获取用户配置
+        user_ai_providers = self.get_config("ai_providers", {})
+        if not isinstance(user_ai_providers, dict):
+            user_ai_providers = {}
+        
+        # 3. 合并配置（用户配置覆盖基础配置）
+        merged_providers = self._deep_merge(base_ai_providers, user_ai_providers)
+        
+        return merged_providers
     
     async def _load_clone_voices(self) -> None:
         """加载克隆声音信息"""
@@ -165,7 +197,6 @@ class UserData:
             self.agent_id = agent_info['agent_id']
             self.agent_name = agent_info['agent_name']
             self.agent_gender = agent_info['agent_gender']
-            
             # 加载配置和记忆数据
             await self._load_user_config_from_agent(agent_info)
             await self._load_user_memory_from_agent(agent_info)
@@ -178,7 +209,6 @@ class UserData:
             
             # 设置 AI 提供者
             self.ai_providers = self._get_merged_ai_providers()
-            
             self.logger.info(f"Agent配置加载完成: agent_id={agent_id}")
             return True
             
@@ -249,6 +279,20 @@ class UserData:
             else:
                 return default
         return value if value is not None else default
+    
+    def set_memory(self, key: str, value: Any) -> None:
+        """设置记忆值"""
+        # 简单的点号分隔键设置
+        keys = key.split('.')
+        memory_dict = self._user_memory.to_dict()
+        current = memory_dict
+        for k in keys[:-1]:
+            if k not in current:
+                current[k] = {}
+            current = current[k]
+        current[keys[-1]] = value
+        self._user_memory = Memory.from_dict(memory_dict)
+        self._user_memory_modified = True
     
     async def save(self) -> bool:
         """保存用户数据到数据库

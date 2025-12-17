@@ -69,14 +69,14 @@ export default function AgentForm({ agent, onClose }: AgentFormProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full">
-        <h2 className="text-xl font-bold mb-4">
+    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50">
+      <div className="bg-bg-primary rounded-lg p-6 max-w-md w-full border border-border-primary shadow-lg">
+        <h2 className="text-xl font-bold mb-4 text-text-primary">
           {agent ? '编辑Agent' : '创建Agent'}
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-text-primary mb-1">
               名称
             </label>
             <input
@@ -84,27 +84,27 @@ export default function AgentForm({ agent, onClose }: AgentFormProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full border border-border-primary bg-bg-primary text-text-primary rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-primary transition-colors"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-text-primary mb-1">
               描述
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full border border-border-primary bg-bg-primary text-text-primary rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-primary transition-colors"
               rows={3}
             />
           </div>
           {!agent && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-text-primary mb-1">
                 模板
               </label>
               {loadingTemplates ? (
-                <div className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-500">
+                <div className="w-full border border-border-primary rounded-lg px-3 py-2 text-text-tertiary bg-bg-secondary">
                   加载中...
                 </div>
               ) : (
@@ -112,7 +112,7 @@ export default function AgentForm({ agent, onClose }: AgentFormProps) {
                   value={templateId}
                   onChange={(e) => setTemplateId(Number(e.target.value))}
                   required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  className="w-full border border-border-primary bg-bg-primary text-text-primary rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-primary transition-colors"
                 >
                   {templates.map((template) => (
                     <option key={template.id} value={template.id}>
@@ -127,14 +127,14 @@ export default function AgentForm({ agent, onClose }: AgentFormProps) {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-accent-primary hover:bg-accent-hover text-text-inverse rounded-lg disabled:opacity-50 transition-colors"
             >
               {loading ? '保存中...' : '保存'}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+              className="flex-1 px-4 py-2 bg-bg-tertiary hover:bg-bg-hover text-text-primary rounded-lg transition-colors"
             >
               取消
             </button>

@@ -61,9 +61,9 @@ export default function MessageList({ messages }: MessageListProps) {
   }, [messages])
 
   return (
-    <div ref={containerRef} className="flex-1 overflow-y-auto p-6 space-y-4">
+    <div ref={containerRef} className="flex-1 overflow-y-auto p-6 space-y-4 bg-bg-primary">
       {messages.length === 0 ? (
-        <div className="text-center text-gray-500 mt-20">
+        <div className="text-center text-text-secondary mt-20">
           <p>开始新的对话吧！</p>
         </div>
       ) : (

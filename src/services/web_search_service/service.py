@@ -67,6 +67,10 @@ class WebSearchService(UTCPService):
         self.api_config = self.config.get("api_config", {})
         self.logging_config = self.config.get("logging", {})
         
+        # 调试：打印完整配置
+        logger.info(f"Web搜索服务完整配置: {self.config}")
+        logger.info(f"Web搜索服务service_config: {self.service_config}")
+        
         # API配置
         self.api_key = self.api_config.get("api_key", "")
         
@@ -76,6 +80,9 @@ class WebSearchService(UTCPService):
         self.default_content_size = self.service_config.get("default_content_size", "high")
         self.default_recency_filter = self.service_config.get("default_recency_filter", "noLimit")
         self.timeout = self.service_config.get("timeout", 30)
+        
+        # 调试：打印加载的配置值
+        logger.info(f"Web搜索服务配置加载完成: default_count={self.default_count}, default_content_size={self.default_content_size}")
         
         # 验证必需配置
         if not self.api_key:

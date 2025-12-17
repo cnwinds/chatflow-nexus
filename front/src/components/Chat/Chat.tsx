@@ -77,14 +77,14 @@ export default function Chat() {
   }, [currentSession, appendToLastAssistantMessage])
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-bg-secondary">
       <Sidebar />
       <div className="flex-1 flex flex-col">
         {currentAgent && (
-          <div className="bg-white border-b border-gray-200 px-6 py-4">
-            <h1 className="text-xl font-semibold">{currentAgent.name}</h1>
+          <div className="bg-bg-primary border-b border-border-primary px-6 py-4">
+            <h1 className="text-xl font-semibold text-text-primary">{currentAgent.name}</h1>
             {currentAgent.description && (
-              <p className="text-sm text-gray-600 mt-1">{currentAgent.description}</p>
+              <p className="text-sm text-text-secondary mt-1">{currentAgent.description}</p>
             )}
           </div>
         )}

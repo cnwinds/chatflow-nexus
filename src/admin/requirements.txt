@@ -1,0 +1,24 @@
+# AI Toys 后台管理系统依赖
+
+# Web框架
+Quart==0.20.0
+quart-cors==0.8.0
+
+# 数据库
+PyMySQL==1.1.0
+aiomysql>=0.2.0  # 异步MySQL驱动，用于SQLAlchemy异步引擎
+SQLAlchemy==2.0.21
+
+# Redis依赖
+redis>=5.0.0
+hiredis>=2.0.0
+
+# 工具库
+python-dotenv==1.0.0
+
+# 密码安全依赖
+bcrypt>=4.0.0
+
+# 开发工具
+pytest==7.4.2
+pytest-asyncio==0.21.1

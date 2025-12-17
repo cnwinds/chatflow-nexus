@@ -25,7 +25,7 @@ export default function AgentList() {
             setEditingAgent(null)
             setShowForm(true)
           }}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          className="px-4 py-2 bg-accent-primary hover:bg-accent-hover text-text-inverse rounded-lg transition-colors"
         >
           + 创建Agent
         </button>
@@ -45,11 +45,11 @@ export default function AgentList() {
         {agents.map((agent) => (
           <div
             key={agent.id}
-            className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow"
+            className="bg-bg-primary rounded-lg shadow border border-border-primary p-6 hover:shadow-lg transition-shadow"
           >
-            <h3 className="text-lg font-semibold mb-2">{agent.name}</h3>
+            <h3 className="text-lg font-semibold mb-2 text-text-primary">{agent.name}</h3>
             {agent.description && (
-              <p className="text-gray-600 text-sm mb-4">{agent.description}</p>
+              <p className="text-text-secondary text-sm mb-4">{agent.description}</p>
             )}
             <div className="flex space-x-2">
               <button
@@ -57,13 +57,13 @@ export default function AgentList() {
                   setEditingAgent(agent)
                   setShowForm(true)
                 }}
-                className="flex-1 px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
+                className="flex-1 px-3 py-2 bg-accent-primary hover:bg-accent-hover text-text-inverse rounded text-sm transition-colors"
               >
                 编辑
               </button>
               <button
                 onClick={() => handleDelete(agent.id)}
-                className="flex-1 px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                className="flex-1 px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm transition-colors"
               >
                 删除
               </button>

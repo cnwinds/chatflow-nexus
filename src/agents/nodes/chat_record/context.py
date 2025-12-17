@@ -36,7 +36,7 @@ class ChatRecordContext:
             
             self._chat_context.append(context_msg)
         
-        self.logger.debug(f"已同步 {len(self._chat_context)} 条消息到上下文")
+        self.logger.info(f"已同步 {len(self._chat_context)} 条历史消息到上下文")
     
     def get_chat_messages(
         self,
@@ -51,6 +51,8 @@ class ChatRecordContext:
         if context and context[-1].get("role") == "user":
             context = context[:-1]
         
+        self.logger.info(f"从上下文中获取 {len(context)} 条历史消息（已排除最后一条用户消息）")
+        
         # 分离压缩和非压缩消息
         compressed_parts = []
         normal_messages = []
@@ -63,6 +65,8 @@ class ChatRecordContext:
             else:
                 normal_messages.append(msg)
         
+        self.logger.info(f"历史消息统计: 正常消息 {len(normal_messages)} 条，压缩消息 {len(compressed_parts)} 条")
+        
         # 构建 system prompt
         if system_prompt and system_prompt.strip():
             final_system = system_prompt.strip()
@@ -72,14 +76,14 @@ class ChatRecordContext:
             
             messages.append({"role": "system", "content": final_system})
         
-        # 添加正常消息
+        # 添加正常消息（历史记录）
         messages.extend(normal_messages)
         
         # 添加当前用户消息
         if user_prompt and user_prompt.strip():
             messages.append({"role": "user", "content": user_prompt.strip()})
         
-        self.logger.debug(f"构建消息: {len(messages)} 条 (包含 {len(compressed_parts)} 条压缩)")
+        self.logger.info(f"构建完成: 共 {len(messages)} 条消息（系统提示词: {1 if system_prompt else 0} 条，历史记录: {len(normal_messages)} 条，当前用户消息: {1 if user_prompt else 0} 条，压缩摘要: {len(compressed_parts)} 条）")
         return messages
     
     def clear_chat_context(self):

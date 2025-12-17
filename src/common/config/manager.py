@@ -328,29 +328,40 @@ class ConfigManager:
         # 从缓存获取服务配置
         cache_key = f"service_{service_name}"
         
-        if cache_key not in self._config_cache:
+        # 如果传入了default参数（通常是services.json中的配置），需要与加载的配置合并
+        # 确保传入的配置优先级最高
+        if default and isinstance(default, dict):
+            # 即使缓存存在，也要重新合并，确保传入的配置生效
             # 加载服务配置（三级配置合并）
             service_config = self._load_service_config(service_name, module_path=module_path)
-            
-            # 处理环境变量替换
-            service_config = self._process_config_env_vars(service_config)
-            
-            # 配置验证（如果有验证规则）
-            if "validation" in service_config:
-                try:
-                    validation_schema = service_config["validation"]
-                    # 移除验证规则，避免传递给服务
-                    del service_config["validation"]
-                    # 验证配置
-                    self._validate_config(service_config, validation_schema)
-                except Exception as e:
-                    raise ConfigurationError(f"服务 {service_name} 配置验证失败: {e}")
-            
+            # 将传入的配置合并到加载的配置上（优先级最高）
+            service_config = self._merge_configs(service_config, default)
+        elif cache_key not in self._config_cache:
+            # 加载服务配置（三级配置合并）
+            service_config = self._load_service_config(service_name, module_path=module_path)
+        else:
+            # 使用缓存
+            service_config = self._config_cache[cache_key]
+        
+        # 处理环境变量替换
+        service_config = self._process_config_env_vars(service_config)
+        
+        # 配置验证（如果有验证规则）
+        if "validation" in service_config:
+            try:
+                validation_schema = service_config["validation"]
+                # 移除验证规则，避免传递给服务
+                del service_config["validation"]
+                # 验证配置
+                self._validate_config(service_config, validation_schema)
+            except Exception as e:
+                raise ConfigurationError(f"服务 {service_name} 配置验证失败: {e}")
+        
+        # 更新缓存
+        if default and isinstance(default, dict) or cache_key not in self._config_cache:
             self._config_cache[cache_key] = service_config
         
-        service_config = self._config_cache[cache_key]
-        
-        # 如果default是字典且service_config为空，返回default
+        # 如果service_config为空且default是字典，返回default
         if not service_config and isinstance(default, dict):
             return default
         

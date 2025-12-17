@@ -1,0 +1,749 @@
+{% extends "admin/base.html" %}
+
+{% block title %}仪表板 - AI Toys 后台管理系统{% endblock %}
+
+{% block page_title %}仪表板{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<style>
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+    }
+    .stats-card .card-body {
+        padding: 1.5rem;
+    }
+    .stats-number {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    .chart-container {
+        position: relative;
+        height: 400px;
+    }
+    .filter-section {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .btn-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 8px;
+        color: white;
+        padding: 8px 16px;
+        transition: all 0.3s ease;
+    }
+    .btn-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        color: white;
+    }
+    .loading {
+        text-align: center;
+        padding: 2rem;
+    }
+    .spinner-border {
+        color: #667eea;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 筛选器 -->
+<div class="filter-section">
+    <div class="row">
+        <div class="col-md-3">
+            <label class="form-label">时间范围</label>
+            <select class="form-select" id="timeRange">
+                <option value="7">最近7天</option>
+                <option value="14">最近14天</option>
+                <option value="30">最近1个月</option>
+                <option value="custom">自定义</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">提供商</label>
+            <select class="form-select" id="providerFilter">
+                <option value="">全部提供商</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">模型</label>
+            <select class="form-select" id="modelFilter">
+                <option value="">全部模型</option>
+            </select>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+            <button class="btn btn-custom w-100" onclick="loadData()">
+                <i class="fas fa-search me-2"></i>查询
+            </button>
+        </div>
+    </div>
+    <div class="row mt-3" id="customDateRange" style="display: none;">
+        <div class="col-md-6">
+            <label class="form-label">开始日期</label>
+            <input type="date" class="form-control" id="startDate">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">结束日期</label>
+            <input type="date" class="form-control" id="endDate">
+        </div>
+    </div>
+</div>
+
+<!-- 统计卡片 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                <div class="stats-number" id="totalCalls">0</div>
+                <div>总调用次数</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <i class="fas fa-clock fa-2x mb-2"></i>
+                <div class="stats-number" id="avgTime">0</div>
+                <div>平均响应时间(ms)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <i class="fas fa-dollar-sign fa-2x mb-2"></i>
+                <div class="stats-number" id="totalCost">0</div>
+                <div>总费用($)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <i class="fas fa-database fa-2x mb-2"></i>
+                <div class="stats-number" id="totalTokens">0</div>
+                <div>总Token数</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 图表区域 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-line me-2"></i>性能趋势图
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 数据表格 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-table me-2"></i>详细数据
+                </div>
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" name="dataViewMode" id="summaryView" value="summary" checked>
+                    <label class="btn btn-outline-primary" for="summaryView">
+                        <i class="fas fa-chart-bar me-1"></i>总计统计
+                    </label>
+                    
+                    <input type="radio" class="btn-check" name="dataViewMode" id="dailyView" value="daily">
+                    <label class="btn btn-outline-primary" for="dailyView">
+                        <i class="fas fa-calendar-day me-1"></i>按天统计
+                    </label>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead id="tableHeader">
+                            <tr>
+                                <th>提供商</th>
+                                <th>模型</th>
+                                <th>调用次数</th>
+                                <th>平均时间(ms)</th>
+                                <th>95分位值(ms)</th>
+                                <th>最大时间(ms)</th>
+                                <th>最小时间(ms)</th>
+                                <th>总费用($)</th>
+                                <th>总Token</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTable">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let performanceChart = null;
+    let currentData = null;
+    let currentDailyData = null;
+    let currentViewMode = 'summary'; // 'summary' 或 'daily'
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        loadProviders();
+        loadData();
+        
+        // 时间范围选择器事件
+        document.getElementById('timeRange').addEventListener('change', function() {
+            const customRange = document.getElementById('customDateRange');
+            if (this.value === 'custom') {
+                customRange.style.display = 'block';
+            } else {
+                customRange.style.display = 'none';
+            }
+        });
+        
+        // 提供商选择器事件
+        document.getElementById('providerFilter').addEventListener('change', function() {
+            loadModels(this.value);
+        });
+        
+        // 数据视图模式切换事件
+        document.querySelectorAll('input[name="dataViewMode"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.checked) {
+                    currentViewMode = this.value;
+                    updateTableDisplay();
+                }
+            });
+        });
+    });
+
+    // 加载提供商列表
+    async function loadProviders() {
+        try {
+            const response = await fetch('/admin/metrics/providers');
+            const result = await response.json();
+            if (result.success) {
+                const select = document.getElementById('providerFilter');
+                select.innerHTML = '<option value="">全部提供商</option>';
+                result.data.forEach(provider => {
+                    select.innerHTML += `<option value="${provider}">${provider}</option>`;
+                });
+            }
+        } catch (error) {
+            console.error('加载提供商列表失败:', error);
+        }
+    }
+
+    // 加载模型列表
+    async function loadModels(provider) {
+        try {
+            const url = provider ? `/admin/metrics/models?provider=${provider}` : '/admin/metrics/models';
+            const response = await fetch(url);
+            const result = await response.json();
+            if (result.success) {
+                const select = document.getElementById('modelFilter');
+                select.innerHTML = '<option value="">全部模型</option>';
+                result.data.forEach(model => {
+                    select.innerHTML += `<option value="${model}">${model}</option>`;
+                });
+            }
+        } catch (error) {
+            console.error('加载模型列表失败:', error);
+        }
+    }
+
+    // 加载数据
+    async function loadData() {
+        const timeRange = document.getElementById('timeRange').value;
+        const provider = document.getElementById('providerFilter').value;
+        const model = document.getElementById('modelFilter').value;
+        
+        let days = 7;
+        if (timeRange === 'custom') {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            if (!startDate || !endDate) {
+                alert('请选择自定义日期范围');
+                return;
+            }
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        } else {
+            days = parseInt(timeRange);
+        }
+        
+        // 声明变量在try块外部
+        let timeseriesResult = null;
+        
+        try {
+            // 显示加载状态
+            showLoading();
+            
+            // 加载汇总数据
+            const summaryResponse = await fetch(`/admin/metrics/summary?days=${days}&provider=${provider}&model_name=${model}`);
+            const summaryResult = await summaryResponse.json();
+            
+            if (summaryResult.success) {
+                updateStats(summaryResult.data);
+                currentData = summaryResult.data;
+            } else {
+                console.error('加载汇总数据失败:', summaryResult.error);
+                currentData = [];
+            }
+            
+            // 加载时间序列数据
+            const timeseriesResponse = await fetch(`/admin/metrics/timeseries?days=${days}&provider=${provider}&model_name=${model}`);
+            timeseriesResult = await timeseriesResponse.json();
+            
+            // 加载按天统计详细数据
+            const dailyResponse = await fetch(`/admin/metrics/daily-details?days=${days}&provider=${provider}&model_name=${model}`);
+            const dailyResult = await dailyResponse.json();
+            
+            if (dailyResult.success) {
+                currentDailyData = dailyResult.data;
+            } else {
+                console.error('加载按天统计详细数据失败:', dailyResult.error);
+                currentDailyData = [];
+            }
+            
+            // 更新数据表格
+            updateTableDisplay();
+            
+        } catch (error) {
+            console.error('加载数据失败:', error);
+            alert('加载数据失败，请重试');
+        } finally {
+            hideLoading();
+            
+            // 在hideLoading之后更新图表，确保canvas元素已经恢复
+            if (timeseriesResult && timeseriesResult.success) {
+                setTimeout(() => {
+                    updateChart(timeseriesResult.data);
+                }, 100);
+            } else {
+                setTimeout(() => {
+                    updateChart([]);
+                }, 100);
+            }
+        }
+    }
+
+    // 更新统计卡片
+    function updateStats(data) {
+        console.log('原始数据:', data); // 添加调试日志
+        
+        const totalCalls = data.reduce((sum, item) => {
+            const calls = parseInt(item.total_calls) || 0;
+            console.log('处理调用次数:', item.total_calls, '->', calls);
+            return sum + calls;
+        }, 0);
+        
+        const totalCost = data.reduce((sum, item) => {
+            const cost = parseFloat(item.total_cost) || 0;
+            console.log('处理费用:', item.total_cost, '->', cost);
+            return sum + cost;
+        }, 0);
+        
+        const totalTokens = data.reduce((sum, item) => {
+            let tokens = 0;
+            if (item.total_tokens !== null && item.total_tokens !== undefined) {
+                // 处理字符串格式的数字，移除前导零
+                const tokenStr = String(item.total_tokens).replace(/^0+/, '') || '0';
+                tokens = parseInt(tokenStr) || 0;
+            }
+            console.log('处理Token数:', item.total_tokens, '->', tokens);
+            return sum + tokens;
+        }, 0);
+        
+        const avgTime = data.length > 0 ? data.reduce((sum, item) => {
+            const time = parseFloat(item.avg_total_time) || 0;
+            return sum + time;
+        }, 0) / data.length : 0;
+        
+        console.log('计算结果:', { totalCalls, totalCost, totalTokens, avgTime });
+        
+        document.getElementById('totalCalls').textContent = totalCalls.toLocaleString();
+        document.getElementById('avgTime').textContent = avgTime.toFixed(2);
+        document.getElementById('totalCost').textContent = totalCost.toFixed(6);
+        document.getElementById('totalTokens').textContent = totalTokens.toLocaleString();
+    }
+
+    // 更新图表
+    function updateChart(data) {
+        const canvas = document.getElementById('performanceChart');
+        if (!canvas) {
+            console.error('Canvas 元素未找到');
+            return;
+        }
+        const ctx = canvas.getContext('2d');
+        
+        if (performanceChart) {
+            performanceChart.destroy();
+        }
+        
+        // 处理空数据情况
+        if (!data || data.length === 0) {
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '暂无数据'
+                        }
+                    }
+                }
+            });
+            return;
+        }
+        
+        // 收集所有唯一的日期
+        const allDates = new Set();
+        data.forEach(series => {
+            series.data.forEach(item => {
+                allDates.add(item.date);
+            });
+        });
+        const sortedDates = Array.from(allDates).sort();
+        
+        const datasets = data.map((series, index) => {
+            const colors = [
+                'rgba(102, 126, 234, 0.8)',
+                'rgba(118, 75, 162, 0.8)',
+                'rgba(255, 99, 132, 0.8)',
+                'rgba(54, 162, 235, 0.8)',
+                'rgba(255, 205, 86, 0.8)',
+                'rgba(75, 192, 192, 0.8)',
+                'rgba(153, 102, 255, 0.8)',
+                'rgba(255, 159, 64, 0.8)'
+            ];
+            
+            // 创建数据映射
+            const p95DataMap = new Map();
+            const maxDataMap = new Map();
+            const minDataMap = new Map();
+            series.data.forEach(item => {
+                p95DataMap.set(item.date, item.p95_total_time);
+                maxDataMap.set(item.date, item.max_total_time);
+                minDataMap.set(item.date, item.min_total_time);
+            });
+            
+            // 为每个日期创建数据点
+            const p95ChartData = sortedDates.map(date => ({
+                x: date,
+                y: p95DataMap.get(date) || 0
+            }));
+            
+            const maxChartData = sortedDates.map(date => ({
+                x: date,
+                y: maxDataMap.get(date) || 0
+            }));
+            
+            const minChartData = sortedDates.map(date => ({
+                x: date,
+                y: minDataMap.get(date) || 0
+            }));
+            
+            return [
+                {
+                    label: series.name,
+                    data: p95ChartData,
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length],
+                    tension: 0.4,
+                    fill: false,
+                    hidden: false
+                },
+                {
+                    label: `${series.name} (最大值)`,
+                    data: maxChartData,
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length],
+                    borderDash: [5, 5],
+                    tension: 0.4,
+                    fill: false,
+                    hidden: true
+                },
+                {
+                    label: `${series.name} (最小值)`,
+                    data: minChartData,
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length],
+                    borderDash: [2, 2],
+                    tension: 0.4,
+                    fill: false,
+                    hidden: true
+                }
+            ];
+        }).flat();
+        
+        performanceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'category',
+                        title: {
+                            display: true,
+                            text: '日期'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: '响应时间 (ms) - 实线为95分位值'
+                        },
+                        // 固定Y轴范围，避免显示/隐藏线条时抖动
+                        min: 0,
+                        max: function(context) {
+                            // 计算所有数据（包括隐藏的最大最小值）的最大值
+                            const allValues = [];
+                            context.chart.data.datasets.forEach(dataset => {
+                                dataset.data.forEach(point => {
+                                    if (point.y !== null && point.y !== undefined) {
+                                        allValues.push(point.y);
+                                    }
+                                });
+                            });
+                            const maxValue = Math.max(...allValues);
+                            // 添加10%的边距
+                            return maxValue * 1.1;
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'AI模型性能趋势'
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        onClick: function(e, legendItem, legend) {
+                            const index = legendItem.datasetIndex;
+                            const chart = legend.chart;
+                            const meta = chart.getDatasetMeta(index);
+                            
+                            // 如果是95分位值线被点击，同时显示/隐藏对应的最大最小值线
+                            const dataset = chart.data.datasets[index];
+                            if (!dataset.label.includes('(最大值)') && !dataset.label.includes('(最小值)')) {
+                                // 找到对应的最大最小值线
+                                const baseLabel = dataset.label;
+                                const maxIndex = chart.data.datasets.findIndex(ds => ds.label === `${baseLabel} (最大值)`);
+                                const minIndex = chart.data.datasets.findIndex(ds => ds.label === `${baseLabel} (最小值)`);
+                                
+                                // 切换最大最小值线的显示状态
+                                if (maxIndex !== -1) {
+                                    meta.hidden = !meta.hidden;
+                                    chart.getDatasetMeta(maxIndex).hidden = !chart.getDatasetMeta(maxIndex).hidden;
+                                }
+                                if (minIndex !== -1) {
+                                    chart.getDatasetMeta(minIndex).hidden = !chart.getDatasetMeta(minIndex).hidden;
+                                }
+                            } else {
+                                // 普通切换
+                                meta.hidden = !meta.hidden;
+                            }
+                            
+                            // 使用 'none' 模式更新，不重新计算比例尺
+                            chart.update('none');
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function(context) {
+                                const dataset = context.dataset;
+                                const dataIndex = context.dataIndex;
+                                const date = context.label;
+                            
+                                // 如果是95分位值线，显示最大最小值信息
+                                if (!dataset.label.includes('(最大值)') && !dataset.label.includes('(最小值)')) {
+                                    const seriesName = dataset.label;
+                                    const seriesData = data.find(s => s.name === seriesName);
+                                    if (seriesData) {
+                                        const dataPoint = seriesData.data.find(d => d.date === date);
+                                        if (dataPoint) {
+                                            return [
+                                                `95分位值: ${dataPoint.p95_total_time}ms`,
+                                                `最大值: ${dataPoint.max_total_time}ms`,
+                                                `最小值: ${dataPoint.min_total_time}ms`
+                                            ];
+                                        }
+                                    }
+                                }
+                                return '';
+                            }
+                        }
+                    }
+                },
+                onHover: function(event, elements) {
+                    if (elements.length > 0) {
+                        const element = elements[0];
+                        const dataset = performanceChart.data.datasets[element.datasetIndex];
+                        
+                        // 如果是95分位值线被悬停，显示对应的最大最小值线
+                        if (!dataset.label.includes('(最大值)') && !dataset.label.includes('(最小值)')) {
+                            const baseLabel = dataset.label;
+                            const maxIndex = performanceChart.data.datasets.findIndex(ds => ds.label === `${baseLabel} (最大值)`);
+                            const minIndex = performanceChart.data.datasets.findIndex(ds => ds.label === `${baseLabel} (最小值)`);
+                            
+                            // 显示最大最小值线
+                            if (maxIndex !== -1) {
+                                performanceChart.getDatasetMeta(maxIndex).hidden = false;
+                            }
+                            if (minIndex !== -1) {
+                                performanceChart.getDatasetMeta(minIndex).hidden = false;
+                            }
+                            
+                            // 使用 'none' 模式更新，不重新计算比例尺
+                            performanceChart.update('none');
+                        }
+                    } else {
+                        // 鼠标离开时，隐藏所有最大最小值线
+                        performanceChart.data.datasets.forEach((dataset, index) => {
+                            if (dataset.label.includes('(最大值)') || dataset.label.includes('(最小值)')) {
+                                performanceChart.getDatasetMeta(index).hidden = true;
+                            }
+                        });
+                        // 使用 'none' 模式更新，不重新计算比例尺
+                        performanceChart.update('none');
+                    }
+                }
+            }
+        });
+    }
+
+    // 更新数据表格显示
+    function updateTableDisplay() {
+        if (currentViewMode === 'summary') {
+            updateTable(currentData || []);
+            updateTableHeader('summary');
+        } else {
+            updateDailyTable(currentDailyData || []);
+            updateTableHeader('daily');
+        }
+    }
+    
+    // 更新表格头部
+    function updateTableHeader(mode) {
+        const header = document.getElementById('tableHeader');
+        if (mode === 'summary') {
+            header.innerHTML = `
+                <tr>
+                    <th>提供商</th>
+                    <th>模型</th>
+                    <th>调用次数</th>
+                    <th>平均时间(ms)</th>
+                    <th>95分位值(ms)</th>
+                    <th>最大时间(ms)</th>
+                    <th>最小时间(ms)</th>
+                    <th>总费用($)</th>
+                    <th>总Token</th>
+                </tr>
+            `;
+        } else {
+            header.innerHTML = `
+                <tr>
+                    <th>日期</th>
+                    <th>提供商</th>
+                    <th>模型</th>
+                    <th>调用次数</th>
+                    <th>平均时间(ms)</th>
+                    <th>95分位值(ms)</th>
+                    <th>最大时间(ms)</th>
+                    <th>最小时间(ms)</th>
+                    <th>总费用($)</th>
+                </tr>
+            `;
+        }
+    }
+    
+    // 更新数据表格（总计统计）
+    function updateTable(data) {
+        const tbody = document.getElementById('dataTable');
+        tbody.innerHTML = '';
+        
+        data.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.provider}</td>
+                <td>${item.model_name}</td>
+                <td>${item.total_calls.toLocaleString()}</td>
+                <td>${item.avg_total_time.toFixed(2)}</td>
+                <td>${item.p95_total_time.toFixed(2)}</td>
+                <td>${item.max_total_time.toFixed(2)}</td>
+                <td>${item.min_total_time.toFixed(2)}</td>
+                <td>${item.total_cost.toFixed(6)}</td>
+                <td>${item.total_tokens.toLocaleString()}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+    
+    // 更新按天统计表格
+    function updateDailyTable(data) {
+        const tbody = document.getElementById('dataTable');
+        tbody.innerHTML = '';
+        
+        data.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.date}</td>
+                <td>${item.provider}</td>
+                <td>${item.model_name}</td>
+                <td>${item.total_calls.toLocaleString()}</td>
+                <td>${item.avg_total_time.toFixed(2)}</td>
+                <td>${item.p95_total_time.toFixed(2)}</td>
+                <td>${item.max_total_time.toFixed(2)}</td>
+                <td>${item.min_total_time.toFixed(2)}</td>
+                <td>${item.total_cost.toFixed(6)}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // 显示加载状态
+    function showLoading() {
+        const chartContainer = document.querySelector('.chart-container');
+        chartContainer.innerHTML = '<div class="loading"><div class="spinner-border" role="status"></div><div class="mt-2">加载中...</div></div>';
+    }
+
+    // 隐藏加载状态
+    function hideLoading() {
+        const chartContainer = document.querySelector('.chart-container');
+        // 恢复canvas元素
+        chartContainer.innerHTML = '<canvas id="performanceChart"></canvas>';
+    }
+</script>
+{% endblock %}

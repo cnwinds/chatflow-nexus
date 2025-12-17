@@ -123,13 +123,12 @@ class AgentNode(Node):
         # 加载配置
         ai_providers = context.get_global_var("ai_providers") or {}
         self.llm_config = ai_providers.get("llm", {})
-        
         # 1. 初始化 LLM（会自动加载基础配置）
         self.llm: Optional[LLMChat] = LLMChat()
         self.llm.load_config(self.llm_config)
 
-        # 2. 创建聊天记录管理器
-        self.chat_record = context.get_global_var("chat_record_node")
+        # 2. 获取聊天记录管理器（通过节点 id 获取，工作流配置中的 id 是 "chat_record"）
+        self.chat_record = self.engine.get_node("chat_record")
         
         # 3. 获取工具列表（全局 UTCP）
         from src.agents.utcp_tools import get_utcp_tools
@@ -295,8 +294,17 @@ class AgentNode(Node):
                 messages.append({"role": "user", "content": user_prompt_text.strip()})
         else:
             # 等待历史记录加载完成（如果正在加载）
+            logger.info(f"Agent {self.node_id} 等待历史记录加载完成...")
             await self.chat_record.wait_for_history_loaded()
+            logger.info(f"Agent {self.node_id} 历史记录加载完成，开始构建消息列表")
+            
+            # 获取历史记录数量（用于日志）
+            history_count = self.chat_record.get_context_count()
+            logger.info(f"Agent {self.node_id} 当前上下文中有 {history_count} 条历史消息")
+            
+            # 获取消息列表（包含历史记录）
             messages = self.chat_record.get_chat_messages(system_prompt_text, user_prompt_text)
+            logger.info(f"Agent {self.node_id} 构建完成，共 {len(messages)} 条消息（包含系统提示词、历史记录和当前用户消息）")
         
         # 流式响应回调：将内容增量发送到输出流
         async def on_delta(chunk_type: str, data: Dict[str, Any]):

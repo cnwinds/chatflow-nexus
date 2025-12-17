@@ -1,0 +1,553 @@
+{% extends "admin/base.html" %}
+
+{% block title %}用户管理 - AI Toys 后台管理系统{% endblock %}
+
+{% block page_title %}用户管理{% endblock %}
+
+{% block content %}
+<!-- 搜索和筛选区域 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-search me-2"></i>搜索和筛选
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">用户名</label>
+                        <input type="text" class="form-control" id="searchUserName" placeholder="输入用户名">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">手机号</label>
+                        <input type="text" class="form-control" id="searchMobile" placeholder="输入手机号">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">登录名</label>
+                        <input type="text" class="form-control" id="searchLoginName" placeholder="输入登录名">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">用户类型</label>
+                        <select class="form-select" id="searchUserType">
+                            <option value="">全部类型</option>
+                            <option value="0">普通用户</option>
+                            <option value="1">系统用户</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-3">
+                        <label class="form-label">状态</label>
+                        <select class="form-select" id="searchStatus">
+                            <option value="">全部状态</option>
+                            <option value="0">禁用</option>
+                            <option value="1">正常</option>
+                        </select>
+                    </div>
+                    <div class="col-md-9 d-flex align-items-end">
+                        <button class="btn btn-custom" onclick="applySearchFilter()">
+                            <i class="fas fa-search me-2"></i>搜索
+                        </button>
+                        <button class="btn btn-outline-secondary ms-2" onclick="resetSearch()">
+                            <i class="fas fa-undo me-2"></i>重置
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 用户列表 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-users me-2"></i>用户列表
+                    <span class="badge bg-primary ms-2" id="userCount">0</span>
+                </div>
+                <button class="btn btn-sm btn-outline-primary" onclick="loadUsers()">
+                    <i class="fas fa-sync-alt me-1"></i>刷新
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>头像</th>
+                                <th>登录名</th>
+                                <th>用户名</th>
+                                <th>手机号</th>
+                                <th>性别</th>
+                                <th>用户类型</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTable">
+                            <tr>
+                                <td colspan="10" class="text-center">
+                                    <div class="loading">
+                                        <div class="spinner-border" role="status"></div>
+                                        <div class="mt-2">加载中...</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 用户详情弹窗 -->
+<div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailModalLabel">
+                    <i class="fas fa-user me-2"></i>用户详情
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>用户ID:</strong> <span id="detailId"></span><br>
+                        <strong>登录名:</strong> <span id="detailLoginName"></span><br>
+                        <strong>用户名:</strong> <span id="detailUserName"></span><br>
+                        <strong>手机号:</strong> <span id="detailMobile"></span><br>
+                        <strong>性别:</strong> <span id="detailGender"></span><br>
+                        <strong>用户类型:</strong> <span id="detailUserType"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>状态:</strong> <span id="detailStatus"></span><br>
+                        <strong>创建时间:</strong> <span id="detailCreatedAt"></span><br>
+                        <strong>更新时间:</strong> <span id="detailUpdatedAt"></span><br>
+                        <strong>头像:</strong> <span id="detailAvatar"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑用户弹窗 -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editModalLabel">
+                    <i class="fas fa-edit me-2"></i>编辑用户信息
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId" name="user_id">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editLoginName" class="form-label">登录名 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="editLoginName" name="login_name" required>
+                                <div class="invalid-feedback" id="editLoginNameError"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editPassword" class="form-label">新密码</label>
+                                <input type="password" class="form-control" id="editPassword" name="password" placeholder="留空表示不修改密码">
+                                <div class="form-text">密码长度至少6位，留空表示不修改密码</div>
+                                <div class="invalid-feedback" id="editPasswordError"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editStatus" class="form-label">状态 <span class="text-danger">*</span></label>
+                                <select class="form-select" id="editStatus" name="status" required>
+                                    <option value="0">禁用</option>
+                                    <option value="1">正常</option>
+                                </select>
+                                <div class="invalid-feedback" id="editStatusError"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">用户信息</label>
+                                <div class="form-control-plaintext">
+                                    <small class="text-muted">
+                                        用户名: <span id="editUserName"></span><br>
+                                        手机号: <span id="editMobile"></span><br>
+                                        用户类型: <span id="editUserType"></span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveUserEdit()">
+                    <i class="fas fa-save me-1"></i>保存修改
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentUsers = [];
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        loadUsers();
+        setupSearchEvents();
+    });
+
+    // 设置搜索事件监听
+    function setupSearchEvents() {
+        // 为所有搜索输入框添加实时搜索
+        const searchInputs = ['searchUserName', 'searchMobile', 'searchLoginName', 'searchUserType', 'searchStatus'];
+        searchInputs.forEach(inputId => {
+            const element = document.getElementById(inputId);
+            if (element) {
+                element.addEventListener('input', function() {
+                    // 延迟搜索，避免频繁触发
+                    clearTimeout(this.searchTimeout);
+                    this.searchTimeout = setTimeout(() => {
+                        applySearchFilter();
+                    }, 300);
+                });
+            }
+        });
+    }
+
+    // 加载用户列表
+    async function loadUsers() {
+        try {
+            showLoading();
+            
+            const response = await fetch('/admin/api/users');
+            const result = await response.json();
+            
+            if (result.success) {
+                currentUsers = result.data;
+                // 应用当前搜索条件
+                applySearchFilter();
+            } else {
+                console.error('加载用户失败:', result.error);
+                showError('加载用户失败: ' + result.error);
+            }
+        } catch (error) {
+            console.error('加载用户失败:', error);
+            showError('加载用户失败，请重试');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    // 应用搜索过滤
+    function applySearchFilter() {
+        const searchUserName = document.getElementById('searchUserName').value.trim().toLowerCase();
+        const searchMobile = document.getElementById('searchMobile').value.trim().toLowerCase();
+        const searchLoginName = document.getElementById('searchLoginName').value.trim().toLowerCase();
+        const searchUserType = document.getElementById('searchUserType').value;
+        const searchStatus = document.getElementById('searchStatus').value;
+        
+        let filteredUsers = currentUsers.filter(user => {
+            // 用户名过滤
+            if (searchUserName && !user.user_name.toLowerCase().includes(searchUserName)) {
+                return false;
+            }
+            
+            // 手机号过滤
+            if (searchMobile && (!user.mobile || !user.mobile.toLowerCase().includes(searchMobile))) {
+                return false;
+            }
+            
+            // 登录名过滤
+            if (searchLoginName && !user.login_name.toLowerCase().includes(searchLoginName)) {
+                return false;
+            }
+            
+            // 用户类型过滤
+            if (searchUserType && user.user_type.toString() !== searchUserType) {
+                return false;
+            }
+            
+            // 状态过滤
+            if (searchStatus && user.status.toString() !== searchStatus) {
+                return false;
+            }
+            
+            return true;
+        });
+        
+        updateUsersTable(filteredUsers);
+        document.getElementById('userCount').textContent = filteredUsers.length;
+    }
+
+    // 更新用户表格
+    function updateUsersTable(users) {
+        const tbody = document.getElementById('usersTable');
+        tbody.innerHTML = '';
+        
+        if (users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">暂无数据</td></tr>';
+            return;
+        }
+        
+        users.forEach(user => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${user.id}</td>
+                <td>
+                    ${user.avatar ? `<img src="${user.avatar}" class="rounded-circle" width="32" height="32" alt="头像">` : '<i class="fas fa-user-circle text-muted" style="font-size: 32px;"></i>'}
+                </td>
+                <td>${user.login_name}</td>
+                <td>${user.user_name}</td>
+                <td>${user.mobile || '-'}</td>
+                <td>${user.gender === 1 ? '男' : '女'}</td>
+                <td>
+                    <span class="badge ${user.user_type === 1 ? 'bg-warning' : 'bg-info'}">
+                        ${user.user_type === 1 ? '系统用户' : '普通用户'}
+                    </span>
+                </td>
+                <td>
+                    <span class="badge ${user.status === 1 ? 'bg-success' : 'bg-danger'}">
+                        ${user.status === 1 ? '正常' : '禁用'}
+                    </span>
+                </td>
+                <td>${user.created_at ? new Date(user.created_at).toLocaleString() : '-'}</td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-info" onclick="showUserDetail(${user.id})" title="查看详情">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-warning" onclick="showUserEdit(${user.id})" title="编辑用户">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // 显示用户详情
+    async function showUserDetail(userId) {
+        try {
+            const response = await fetch(`/admin/api/users/${userId}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                const user = result.data;
+                document.getElementById('detailId').textContent = user.id;
+                document.getElementById('detailLoginName').textContent = user.login_name;
+                document.getElementById('detailUserName').textContent = user.user_name;
+                document.getElementById('detailMobile').textContent = user.mobile || '-';
+                document.getElementById('detailGender').textContent = user.gender === 1 ? '男' : '女';
+                document.getElementById('detailUserType').textContent = user.user_type === 1 ? '系统用户' : '普通用户';
+                document.getElementById('detailStatus').textContent = user.status === 1 ? '正常' : '禁用';
+                document.getElementById('detailCreatedAt').textContent = user.created_at ? new Date(user.created_at).toLocaleString() : '-';
+                document.getElementById('detailUpdatedAt').textContent = user.updated_at ? new Date(user.updated_at).toLocaleString() : '-';
+                document.getElementById('detailAvatar').innerHTML = user.avatar ? `<img src="${user.avatar}" class="rounded-circle" width="50" height="50" alt="头像">` : '<i class="fas fa-user-circle text-muted" style="font-size: 50px;"></i>';
+                
+                const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+                modal.show();
+            } else {
+                showError('获取用户详情失败: ' + result.error);
+            }
+        } catch (error) {
+            console.error('获取用户详情失败:', error);
+            showError('获取用户详情失败，请重试');
+        }
+    }
+
+    // 显示编辑用户弹窗
+    async function showUserEdit(userId) {
+        try {
+            const response = await fetch(`/admin/api/users/${userId}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                const user = result.data;
+                
+                // 填充表单数据
+                document.getElementById('editUserId').value = user.id;
+                document.getElementById('editLoginName').value = user.login_name;
+                document.getElementById('editPassword').value = '';
+                document.getElementById('editStatus').value = user.status;
+                
+                // 显示用户信息
+                document.getElementById('editUserName').textContent = user.user_name;
+                document.getElementById('editMobile').textContent = user.mobile || '-';
+                document.getElementById('editUserType').textContent = user.user_type === 1 ? '系统用户' : '普通用户';
+                
+                // 清除之前的验证状态
+                clearFormValidation();
+                
+                const modal = new bootstrap.Modal(document.getElementById('editModal'));
+                modal.show();
+            } else {
+                showError('获取用户详情失败: ' + result.error);
+            }
+        } catch (error) {
+            console.error('获取用户详情失败:', error);
+            showError('获取用户详情失败，请重试');
+        }
+    }
+
+    // 保存用户编辑
+    async function saveUserEdit() {
+        try {
+            // 获取表单数据
+            const userId = document.getElementById('editUserId').value;
+            const loginName = document.getElementById('editLoginName').value.trim();
+            const password = document.getElementById('editPassword').value.trim();
+            const status = parseInt(document.getElementById('editStatus').value);
+            
+            // 验证表单
+            if (!validateEditForm(loginName, password, status)) {
+                return;
+            }
+            
+            // 构建请求数据
+            const updateData = {
+                login_name: loginName,
+                status: status
+            };
+            
+            // 如果密码不为空，则包含密码
+            if (password) {
+                updateData.password = password;
+            }
+            
+            // 发送更新请求
+            const response = await fetch(`/admin/api/users/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updateData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showSuccess('用户信息更新成功');
+                
+                // 关闭弹窗
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
+                modal.hide();
+                
+                // 重新加载用户列表
+                loadUsers();
+            } else {
+                showError('更新用户信息失败: ' + result.error);
+            }
+        } catch (error) {
+            console.error('更新用户信息失败:', error);
+            showError('更新用户信息失败，请重试');
+        }
+    }
+
+    // 验证编辑表单
+    function validateEditForm(loginName, password, status) {
+        let isValid = true;
+        
+        // 清除之前的验证状态
+        clearFormValidation();
+        
+        // 验证登录名
+        if (!loginName) {
+            setFieldError('editLoginName', '登录名不能为空');
+            isValid = false;
+        } else if (loginName.length < 2) {
+            setFieldError('editLoginName', '登录名长度不能少于2位');
+            isValid = false;
+        }
+        
+        // 验证密码（如果提供了）
+        if (password && password.length < 6) {
+            setFieldError('editPassword', '密码长度不能少于6位');
+            isValid = false;
+        }
+        
+        // 验证状态
+        if (status !== 0 && status !== 1) {
+            setFieldError('editStatus', '请选择有效的状态');
+            isValid = false;
+        }
+        
+        return isValid;
+    }
+
+    // 设置字段错误
+    function setFieldError(fieldId, message) {
+        const field = document.getElementById(fieldId);
+        const errorElement = document.getElementById(fieldId + 'Error');
+        
+        field.classList.add('is-invalid');
+        errorElement.textContent = message;
+    }
+
+    // 清除表单验证状态
+    function clearFormValidation() {
+        const fields = ['editLoginName', 'editPassword', 'editStatus'];
+        fields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            const errorElement = document.getElementById(fieldId + 'Error');
+            
+            field.classList.remove('is-invalid');
+            errorElement.textContent = '';
+        });
+    }
+
+    // 重置搜索
+    function resetSearch() {
+        document.getElementById('searchUserName').value = '';
+        document.getElementById('searchMobile').value = '';
+        document.getElementById('searchLoginName').value = '';
+        document.getElementById('searchUserType').value = '';
+        document.getElementById('searchStatus').value = '';
+        applySearchFilter();
+    }
+
+    // 显示加载状态
+    function showLoading() {
+        const tbody = document.getElementById('usersTable');
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center"><div class="loading"><div class="spinner-border" role="status"></div><div class="mt-2">加载中...</div></div></td></tr>';
+    }
+
+    // 隐藏加载状态
+    function hideLoading() {
+        // 加载状态会在updateUsersTable中被替换
+    }
+
+    // 显示成功消息
+    function showSuccess(message) {
+        // 简单的成功提示，可以后续优化为Toast
+        alert('✅ ' + message);
+    }
+
+    // 显示错误消息
+    function showError(message) {
+        // 简单的错误提示，可以后续优化为Toast
+        alert('❌ ' + message);
+    }
+</script>
+{% endblock %}

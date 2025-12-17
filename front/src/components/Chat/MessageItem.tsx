@@ -57,28 +57,28 @@ export default function MessageItem({ message }: MessageItemProps) {
       <div
         className={`max-w-3xl rounded-lg px-4 py-2 ${
           isUser
-            ? 'bg-indigo-600 text-white'
-            : 'bg-white border border-gray-200 text-gray-900'
+            ? 'bg-message-user text-message-user-text'
+            : 'bg-message-assistant border border-border-primary text-message-assistant-text'
         }`}
       >
-        <div className={`prose prose-sm max-w-none ${isUser ? 'prose-invert' : ''} prose-pre:bg-gray-100 prose-pre:border prose-pre:border-gray-200`}>
+        <div className={`prose prose-sm max-w-none ${isUser ? 'prose-invert' : ''} dark:prose-invert prose-pre:bg-bg-secondary prose-pre:border prose-pre:border-border-primary`}>
           <div
             className="flex-1 markdown-content"
             dangerouslySetInnerHTML={{ __html: htmlContent }}
           />
           {isStreaming && (
-            <span className="inline-block w-2 h-4 bg-gray-600 ml-1 animate-pulse" />
+            <span className={`inline-block w-2 h-4 ml-1 animate-pulse ${isUser ? 'bg-white/50' : 'bg-text-primary/30'}`} />
           )}
         </div>
-        <div className={`text-xs mt-2 flex items-center ${isUser ? 'text-indigo-100' : 'text-gray-500'}`}>
+        <div className={`text-xs mt-2 flex items-center ${isUser ? 'text-message-user-text/80' : 'text-text-tertiary'}`}>
           <span>{new Date(message.created_at).toLocaleTimeString()}</span>
           {isStreaming && (
-            <span className="ml-2 text-gray-400 flex items-center gap-1">
+            <span className={`ml-2 flex items-center gap-1 ${isUser ? 'text-message-user-text/60' : 'text-text-tertiary'}`}>
               <span>正在输入</span>
               <span className="flex gap-0.5">
-                <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span className={`w-1 h-1 rounded-full animate-bounce ${isUser ? 'bg-white/60' : 'bg-text-tertiary'}`} style={{ animationDelay: '0ms' }} />
+                <span className={`w-1 h-1 rounded-full animate-bounce ${isUser ? 'bg-white/60' : 'bg-text-tertiary'}`} style={{ animationDelay: '150ms' }} />
+                <span className={`w-1 h-1 rounded-full animate-bounce ${isUser ? 'bg-white/60' : 'bg-text-tertiary'}`} style={{ animationDelay: '300ms' }} />
               </span>
             </span>
           )}

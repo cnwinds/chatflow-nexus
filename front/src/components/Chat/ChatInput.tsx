@@ -125,11 +125,13 @@ export default function ChatInput() {
     }
   }
 
-  const handleKeyPress = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Ctrl+Enter 或 Cmd+Enter 发送消息
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault()
       handleSend()
     }
+    // 普通 Enter 键默认行为是换行，不需要阻止
   }
 
   const handleVoiceToggle = async () => {
@@ -185,24 +187,24 @@ export default function ChatInput() {
   }
 
   return (
-    <div className="border-t border-gray-200 bg-white p-4">
+    <div className="border-t border-border-primary bg-bg-primary p-4">
       <div className="flex items-end space-x-4">
         {inputMode === 'text' ? (
           <>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="输入消息... (Enter发送)"
-              className="flex-1 resize-none border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              rows={1}
+              onKeyDown={handleKeyDown}
+              placeholder="输入消息... (Ctrl+Enter发送)"
+              className="flex-1 resize-none border border-border-primary rounded-lg px-4 py-2 bg-bg-primary text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-accent-primary transition-colors"
+              rows={4}
               disabled={loading}
             />
             {isSupported && (
               <button
                 onClick={handleVoiceToggle}
                 disabled={loading || !currentAgent}
-                className="p-2 text-gray-600 hover:text-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="p-2 text-text-secondary hover:text-accent-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 title="切换到语音输入"
               >
                 <MicrophoneIcon className="w-6 h-6" />
@@ -211,17 +213,17 @@ export default function ChatInput() {
             <button
               onClick={handleSend}
               disabled={loading || !input.trim()}
-              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2 bg-accent-primary hover:bg-accent-hover text-text-inverse rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? '发送中...' : '发送'}
+              {loading ? '发送中...' : '发送 (Ctrl+Enter)'}
             </button>
           </>
         ) : (
           <>
-            <div className="flex-1 flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg bg-gray-50">
+            <div className="flex-1 flex items-center justify-center px-4 py-2 border border-border-primary rounded-lg bg-bg-secondary">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                <span className="text-gray-600">
+                <span className="text-text-secondary">
                   {isRecording ? '正在录音...' : '准备录音...'}
                 </span>
               </div>
@@ -238,7 +240,7 @@ export default function ChatInput() {
                 setInputMode('text')
                 stopRecording()
               }}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              className="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors"
             >
               取消
             </button>
@@ -246,7 +248,7 @@ export default function ChatInput() {
         )}
       </div>
       {!isSupported && (
-        <div className="mt-2 text-sm text-gray-500">
+        <div className="mt-2 text-sm text-text-tertiary">
           您的浏览器不支持语音输入功能
         </div>
       )}

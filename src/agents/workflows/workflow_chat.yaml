@@ -112,9 +112,6 @@ workflow:
       top: -30
     name: ChatRecordNode
     config:
-      compress_token_threshold: 1000
-      load_history_limit: 500
-      memory_extract_max_length: 4000
       compress_system_prompt: |
         你是一个专业的对话压缩助手。你的任务是将多轮对话压缩为简洁的摘要，保留关键信息和上下文。
 
@@ -194,6 +191,9 @@ workflow:
         - 如果没有相关信息，返回空数组 []
         - 确保输出的JSON格式正确且完整
         - 长期记忆的内容在 {{ memory_max_length }} 字符以内，超过的话根据重要程度进行精简
+      compress_token_threshold: 100000
+      load_history_limit: 500
+      memory_extract_max_length: 4000
   connections:
   - id: edge-1-vad-stt
     from: vad.speech_audio

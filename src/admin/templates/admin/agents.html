@@ -1,0 +1,1234 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Agent配置管理 - AI Toys 后台管理系统{% endblock %}
+
+{% block page_title %}Agent配置管理{% endblock %}
+
+{% block content %}
+<!-- 搜索和筛选区域 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-search me-2"></i>搜索和筛选
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">Agent名称</label>
+                        <input type="text" class="form-control" id="searchName" placeholder="输入Agent名称">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">用户名</label>
+                        <input type="text" class="form-control" id="searchUser" placeholder="输入用户名">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">设备UUID</label>
+                        <input type="text" class="form-control" id="searchDevice" placeholder="输入设备UUID">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">状态</label>
+                        <select class="form-select" id="searchStatus">
+                            <option value="">全部状态</option>
+                            <option value="0">禁用</option>
+                            <option value="1">正常</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button class="btn btn-custom" onclick="applySearchFilter()">
+                            <i class="fas fa-search me-2"></i>搜索
+                        </button>
+                        <button class="btn btn-outline-secondary ms-2" onclick="resetSearch()">
+                            <i class="fas fa-undo me-2"></i>重置
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Agent列表 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-robot me-2"></i>Agent列表
+                    <span class="badge bg-primary ms-2" id="agentCount">0</span>
+                </div>
+                <button class="btn btn-sm btn-outline-primary" onclick="loadAgents()">
+                    <i class="fas fa-sync-alt me-1"></i>刷新
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Agent名称</th>
+                                <th>描述</th>
+                                <th>用户名</th>
+                                <th>设备UUID</th>
+                                <th>设备名称</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agentsTable">
+                            <tr>
+                                <td colspan="9" class="text-center">
+                                    <div class="loading">
+                                        <div class="spinner-border" role="status"></div>
+                                        <div class="mt-2">加载中...</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 配置编辑弹窗 -->
+<div class="modal fade" id="configModal" tabindex="-1" aria-labelledby="configModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="configModalLabel">
+                    <i class="fas fa-cog me-2"></i>编辑Agent配置
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Agent名称 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="modalAgentName" placeholder="请输入Agent名称">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">关联用户</label>
+                        <input type="text" class="form-control" id="modalUserName" readonly>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">设备UUID</label>
+                        <input type="text" class="form-control" id="modalDeviceUuid" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">设备名称</label>
+                        <input type="text" class="form-control" id="modalDeviceName" readonly>
+                    </div>
+                </div>
+                
+                <!-- 标签页导航 -->
+                <ul class="nav nav-tabs" id="configTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="agent-config-tab" data-bs-toggle="tab" data-bs-target="#agent-config" type="button" role="tab" aria-controls="agent-config" aria-selected="true" style="color: #667eea; background-color: #f8f9fa; border: 2px solid #667eea;">
+                            <i class="fas fa-cog me-2"></i>Agent配置
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="memory-data-tab" data-bs-toggle="tab" data-bs-target="#memory-data" type="button" role="tab" aria-controls="memory-data" aria-selected="false" style="color: #6c757d; background-color: #f8f9fa; border: 2px solid #e9ecef;">
+                            <i class="fas fa-brain me-2"></i>记忆数据
+                        </button>
+                    </li>
+                </ul>
+                
+                <!-- 标签页内容 -->
+                <div class="tab-content" id="configTabContent">
+                    <!-- Agent配置标签页 -->
+                    <div class="tab-pane fade show active" id="agent-config" role="tabpanel" aria-labelledby="agent-config-tab">
+                        <div class="mb-3 mt-3">
+                            <label class="form-label">Agent配置 (JSON格式)</label>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted">支持JSON格式验证和自动格式化</small>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="formatJSON()">
+                                        <i class="fas fa-magic me-1"></i>格式化
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="validateJSON()">
+                                        <i class="fas fa-check me-1"></i>验证
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="position-relative">
+                                <textarea class="form-control json-editor" id="agentConfigEditor" rows="15" 
+                                          placeholder="请输入JSON格式的配置..." 
+                                          style="font-family: 'Courier New', 'Monaco', 'Consolas', monospace; font-size: 14px; line-height: 1.5; tab-size: 2;"></textarea>
+                                <div class="position-absolute top-0 end-0 p-2">
+                                    <small class="text-muted">支持Tab键缩进</small>
+                                </div>
+                            </div>
+                            <div class="invalid-feedback" id="jsonError"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 记忆数据标签页 -->
+                    <div class="tab-pane fade" id="memory-data" role="tabpanel" aria-labelledby="memory-data-tab">
+                        <div class="mb-3 mt-3">
+                            <label class="form-label">记忆数据 (JSON格式)</label>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted">存储Agent的记忆和上下文信息</small>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="formatMemoryJSON()">
+                                        <i class="fas fa-magic me-1"></i>格式化
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="validateMemoryJSON()">
+                                        <i class="fas fa-check me-1"></i>验证
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="position-relative">
+                                <textarea class="form-control json-editor" id="memoryDataEditor" rows="15" 
+                                          placeholder="请输入JSON格式的记忆数据..." 
+                                          style="font-family: 'Courier New', 'Monaco', 'Consolas', monospace; font-size: 14px; line-height: 1.5; tab-size: 2;"></textarea>
+                                <div class="position-absolute top-0 end-0 p-2">
+                                    <small class="text-muted">支持Tab键缩进</small>
+                                </div>
+                            </div>
+                            <div class="invalid-feedback" id="memoryJsonError"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-custom" onclick="saveConfig()">
+                    <i class="fas fa-save me-2"></i>保存配置
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 配置详情弹窗 -->
+<div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailModalLabel">
+                    <i class="fas fa-info-circle me-2"></i>Agent详情
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Agent ID:</strong> <span id="detailId"></span><br>
+                        <strong>名称:</strong> <span id="detailName"></span><br>
+                        <strong>描述:</strong> <span id="detailDescription"></span><br>
+                        <strong>性别:</strong> <span id="detailGender"></span><br>
+                        <strong>状态:</strong> <span id="detailStatus"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>用户ID:</strong> <span id="detailUserId"></span><br>
+                        <strong>用户名:</strong> <span id="detailUserName"></span><br>
+                        <strong>设备UUID:</strong> <span id="detailDeviceUuid"></span><br>
+                        <strong>设备名称:</strong> <span id="detailDeviceName"></span><br>
+                        <strong>创建时间:</strong> <span id="detailCreatedAt"></span>
+                    </div>
+                </div>
+                <hr>
+                <div class="mb-3">
+                    <strong>Agent配置:</strong>
+                    <pre class="bg-light p-3 rounded" id="detailConfig"></pre>
+                </div>
+                <div class="mb-3">
+                    <strong>记忆数据:</strong>
+                    <pre class="bg-light p-3 rounded" id="detailMemoryData"></pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-custom" onclick="editConfig()">
+                    <i class="fas fa-edit me-2"></i>编辑配置
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 迁移弹窗 -->
+<div class="modal fade" id="transferModal" tabindex="-1" aria-labelledby="transferModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="transferModalLabel">
+                    <i class="fas fa-exchange-alt me-2"></i>迁移Agent和设备
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>注意：</strong>迁移操作将把Agent和关联设备的所有权转移给目标用户，原用户将失去访问权限。
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Agent信息</label>
+                        <div class="card">
+                            <div class="card-body">
+                                <strong>ID:</strong> <span id="transferAgentId"></span><br>
+                                <strong>名称:</strong> <span id="transferAgentName"></span><br>
+                                <strong>当前用户:</strong> <span id="transferCurrentUser"></span><br>
+                                <strong>设备UUID:</strong> <span id="transferDeviceUuid"></span><br>
+                                <strong>设备名称:</strong> <span id="transferDeviceName"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">目标用户 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="transferTargetUser" required>
+                            <option value="">请选择目标用户...</option>
+                        </select>
+                        <div class="form-text">选择要将Agent迁移给的用户</div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">迁移说明</label>
+                    <textarea class="form-control" id="transferNote" rows="3" placeholder="可选：添加迁移说明..."></textarea>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>迁移后：</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Agent的所有权将转移给目标用户</li>
+                        <li>如果有关联设备，设备所有权也会转移</li>
+                        <li>所有配置和历史数据将保留</li>
+                        <li>原用户将失去对该Agent和设备的访问权限</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-warning" onclick="confirmTransfer()" id="transferConfirmBtn">
+                    <i class="fas fa-exchange-alt me-2"></i>确认迁移
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* 标签页样式优化 */
+    .nav-tabs {
+        border-bottom: 2px solid #e9ecef;
+        margin-bottom: 1rem;
+    }
+    
+    .nav-tabs .nav-link {
+        border: 2px solid #e9ecef;
+        border-radius: 8px 8px 0 0;
+        color: #6c757d;
+        font-weight: 500;
+        padding: 12px 20px;
+        margin-right: 4px;
+        transition: all 0.3s ease;
+        background-color: #f8f9fa;
+    }
+    
+    .nav-tabs .nav-link:hover {
+        border-color: #667eea;
+        color: #667eea;
+        background-color: rgba(102, 126, 234, 0.1);
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #667eea;
+        background-color: #f8f9fa;
+        border-color: #667eea;
+        font-weight: 600;
+    }
+    
+    .nav-tabs .nav-link.active:hover {
+        color: #667eea;
+        background-color: #f8f9fa;
+    }
+    
+    /* 标签页内容区域 */
+    .tab-content {
+        background: white;
+        border-radius: 0 8px 8px 8px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    /* JSON编辑器样式优化 */
+    .json-editor {
+        font-family: 'Fira Code', 'Courier New', 'Monaco', 'Consolas', monospace;
+        font-size: 14px;
+        line-height: 1.6;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        min-height: 300px;
+        background-color: #f8f9fa;
+        transition: all 0.3s ease;
+        resize: vertical;
+    }
+    
+    .json-editor:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+        background-color: white;
+    }
+    
+    .json-editor.is-invalid {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.15);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentAgents = [];
+    let currentAgentId = null;
+    let transferAgentId = null;
+    let allUsers = [];
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        loadAgents();
+        loadUsers();
+        setupSearchEvents();
+        setupTabEvents();
+    });
+
+    // 设置搜索事件监听
+    function setupSearchEvents() {
+        // 为所有搜索输入框添加实时搜索
+        const searchInputs = ['searchName', 'searchUser', 'searchDevice', 'searchStatus'];
+        searchInputs.forEach(inputId => {
+            const element = document.getElementById(inputId);
+            if (element) {
+                element.addEventListener('input', function() {
+                    // 延迟搜索，避免频繁触发
+                    clearTimeout(this.searchTimeout);
+                    this.searchTimeout = setTimeout(() => {
+                        applySearchFilter();
+                    }, 300);
+                });
+            }
+        });
+    }
+
+    // 设置标签页事件监听
+    function setupTabEvents() {
+        // 监听标签页切换事件
+        const agentConfigTab = document.getElementById('agent-config-tab');
+        const memoryDataTab = document.getElementById('memory-data-tab');
+        
+        if (agentConfigTab) {
+            agentConfigTab.addEventListener('click', function() {
+                updateTabStyles('agent-config');
+            });
+        }
+        
+        if (memoryDataTab) {
+            memoryDataTab.addEventListener('click', function() {
+                updateTabStyles('memory-data');
+            });
+        }
+    }
+
+    // 更新标签页样式
+    function updateTabStyles(activeTab) {
+        const agentConfigTab = document.getElementById('agent-config-tab');
+        const memoryDataTab = document.getElementById('memory-data-tab');
+        
+        if (activeTab === 'agent-config') {
+            // Agent配置标签页激活
+            agentConfigTab.style.color = '#667eea';
+            agentConfigTab.style.backgroundColor = '#f8f9fa';
+            agentConfigTab.style.borderColor = '#667eea';
+            agentConfigTab.style.fontWeight = '600';
+            
+            memoryDataTab.style.color = '#6c757d';
+            memoryDataTab.style.backgroundColor = '#f8f9fa';
+            memoryDataTab.style.borderColor = '#e9ecef';
+            memoryDataTab.style.fontWeight = '500';
+        } else if (activeTab === 'memory-data') {
+            // 记忆数据标签页激活
+            memoryDataTab.style.color = '#667eea';
+            memoryDataTab.style.backgroundColor = '#f8f9fa';
+            memoryDataTab.style.borderColor = '#667eea';
+            memoryDataTab.style.fontWeight = '600';
+            
+            agentConfigTab.style.color = '#6c757d';
+            agentConfigTab.style.backgroundColor = '#f8f9fa';
+            agentConfigTab.style.borderColor = '#e9ecef';
+            agentConfigTab.style.fontWeight = '500';
+        }
+    }
+
+    // 加载Agents列表
+    async function loadAgents() {
+        try {
+            showLoading();
+            
+            const response = await fetch('/admin/api/agents');
+            const result = await response.json();
+            
+            if (result.success) {
+                currentAgents = result.data;
+                // 应用当前搜索条件
+                applySearchFilter();
+            } else {
+                console.error('加载agents失败:', result.error);
+                showError('加载agents失败: ' + result.error);
+            }
+        } catch (error) {
+            console.error('加载agents失败:', error);
+            showError('加载agents失败，请重试');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    // 应用搜索过滤
+    function applySearchFilter() {
+        const searchName = document.getElementById('searchName').value.trim().toLowerCase();
+        const searchUser = document.getElementById('searchUser').value.trim().toLowerCase();
+        const searchDevice = document.getElementById('searchDevice').value.trim().toLowerCase();
+        const searchStatus = document.getElementById('searchStatus').value;
+        
+        let filteredAgents = currentAgents.filter(agent => {
+            // Agent名称过滤
+            if (searchName && !agent.name.toLowerCase().includes(searchName)) {
+                return false;
+            }
+            
+            // 用户名过滤
+            if (searchUser && (!agent.user_name || !agent.user_name.toLowerCase().includes(searchUser))) {
+                return false;
+            }
+            
+            // 设备UUID过滤
+            if (searchDevice && (!agent.device_uuid || !agent.device_uuid.toLowerCase().includes(searchDevice))) {
+                return false;
+            }
+            
+            // 状态过滤
+            if (searchStatus && agent.status.toString() !== searchStatus) {
+                return false;
+            }
+            
+            return true;
+        });
+        
+        updateAgentsTable(filteredAgents);
+        document.getElementById('agentCount').textContent = filteredAgents.length;
+    }
+
+    // 更新Agents表格
+    function updateAgentsTable(agents) {
+        const tbody = document.getElementById('agentsTable');
+        tbody.innerHTML = '';
+        
+        if (agents.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">暂无数据</td></tr>';
+            return;
+        }
+        
+        agents.forEach(agent => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${agent.id}</td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        ${agent.avatar ? `<img src="${agent.avatar}" class="rounded-circle me-2" width="32" height="32" alt="头像">` : '<i class="fas fa-robot me-2 text-muted"></i>'}
+                        <strong>${agent.name}</strong>
+                    </div>
+                </td>
+                <td>${agent.description || '-'}</td>
+                <td>${agent.user_name || '-'}</td>
+                <td>${agent.device_uuid || '-'}</td>
+                <td>${agent.device_name || '-'}</td>
+                <td>
+                    <span class="badge ${agent.status === 1 ? 'bg-success' : 'bg-danger'}">
+                        ${agent.status === 1 ? '正常' : '禁用'}
+                    </span>
+                </td>
+                <td>${agent.created_at ? new Date(agent.created_at).toLocaleString() : '-'}</td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-info" onclick="showDetail(${agent.id})" title="查看详情">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="editAgentConfig(${agent.id})" title="编辑配置">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-outline-warning" onclick="showTransferModal(${agent.id}, '${agent.name}', '${agent.user_name || '-'}', '${agent.device_uuid || '-'}', '${agent.device_name || '-'}')" title="迁移给其他用户">
+                            <i class="fas fa-exchange-alt"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // 显示Agent详情
+    async function showDetail(agentId) {
+        try {
+            const response = await fetch(`/admin/api/agents/${agentId}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                const agent = result.data;
+                document.getElementById('detailId').textContent = agent.id;
+                document.getElementById('detailName').textContent = agent.name;
+                document.getElementById('detailDescription').textContent = agent.description || '-';
+                document.getElementById('detailGender').textContent = agent.gender === 1 ? '男' : '女';
+                document.getElementById('detailStatus').textContent = agent.status === 1 ? '正常' : '禁用';
+                document.getElementById('detailUserId').textContent = agent.user_id;
+                document.getElementById('detailUserName').textContent = agent.user_name || '-';
+                document.getElementById('detailDeviceUuid').textContent = agent.device_uuid || '-';
+                document.getElementById('detailDeviceName').textContent = agent.device_name || '-';
+                document.getElementById('detailCreatedAt').textContent = agent.created_at ? new Date(agent.created_at).toLocaleString() : '-';
+                document.getElementById('detailConfig').textContent = agent.agent_config ? JSON.stringify(agent.agent_config, null, 2) : '无配置';
+                document.getElementById('detailMemoryData').textContent = agent.memory_data ? JSON.stringify(agent.memory_data, null, 2) : '无记忆数据';
+                
+                currentAgentId = agentId;
+                
+                const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+                modal.show();
+            } else {
+                showError('获取Agent详情失败: ' + result.error);
+            }
+        } catch (error) {
+            console.error('获取Agent详情失败:', error);
+            showError('获取Agent详情失败，请重试');
+        }
+    }
+
+    // 编辑Agent配置
+    async function editAgentConfig(agentId) {
+        try {
+            const response = await fetch(`/admin/api/agents/${agentId}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                const agent = result.data;
+                document.getElementById('modalAgentName').value = agent.name;
+                document.getElementById('modalUserName').value = agent.user_name || '-';
+                document.getElementById('modalDeviceUuid').value = agent.device_uuid || '-';
+                document.getElementById('modalDeviceName').value = agent.device_name || '-';
+                
+                // 确保JSON以格式化形式显示
+                let configText = '{}';
+                if (agent.agent_config) {
+                    if (typeof agent.agent_config === 'string') {
+                        // 如果是字符串，先解析再格式化
+                        try {
+                            const parsed = JSON.parse(agent.agent_config);
+                            configText = JSON.stringify(parsed, null, 2);
+                        } catch (e) {
+                            // 如果解析失败，直接使用原字符串
+                            configText = agent.agent_config;
+                        }
+                    } else {
+                        // 如果是对象，直接格式化
+                        configText = JSON.stringify(agent.agent_config, null, 2);
+                    }
+                }
+                
+                document.getElementById('agentConfigEditor').value = configText;
+                
+                // 处理记忆数据
+                let memoryDataText = '{}';
+                if (agent.memory_data) {
+                    if (typeof agent.memory_data === 'string') {
+                        // 如果是字符串，先解析再格式化
+                        try {
+                            const parsed = JSON.parse(agent.memory_data);
+                            memoryDataText = JSON.stringify(parsed, null, 2);
+                        } catch (e) {
+                            // 如果解析失败，直接使用原字符串
+                            memoryDataText = agent.memory_data;
+                        }
+                    } else {
+                        // 如果是对象，直接格式化
+                        memoryDataText = JSON.stringify(agent.memory_data, null, 2);
+                    }
+                }
+                
+                document.getElementById('memoryDataEditor').value = memoryDataText;
+                
+                currentAgentId = agentId;
+                
+                const modal = new bootstrap.Modal(document.getElementById('configModal'));
+                modal.show();
+                
+                // 弹窗显示后自动格式化一次（静默模式）
+                setTimeout(() => {
+                    formatJSONSilent();
+                    formatMemoryJSONSilent();
+                    setupJSONEditor();
+                    setupMemoryJSONEditor();
+                }, 100);
+            } else {
+                showError('获取Agent配置失败: ' + result.error);
+            }
+        } catch (error) {
+            console.error('获取Agent配置失败:', error);
+            showError('获取Agent配置失败，请重试');
+        }
+    }
+
+    // 从详情弹窗编辑配置
+    function editConfig() {
+        bootstrap.Modal.getInstance(document.getElementById('detailModal')).hide();
+        editAgentConfig(currentAgentId);
+    }
+
+    // 格式化JSON（只在错误时显示提示）
+    function formatJSON() {
+        const editor = document.getElementById('agentConfigEditor');
+        const originalValue = editor.value.trim();
+        
+        if (!originalValue) {
+            editor.value = '{}';
+            // 不显示成功提示，静默处理
+            return;
+        }
+        
+        try {
+            // 尝试解析JSON
+            const obj = JSON.parse(originalValue);
+            
+            // 使用2个空格缩进格式化
+            const formatted = JSON.stringify(obj, null, 2);
+            editor.value = formatted;
+            
+            // 清除错误状态
+            editor.classList.remove('is-invalid');
+            document.getElementById('jsonError').textContent = '';
+            
+            // 不显示成功提示，静默处理
+        } catch (e) {
+            showError('JSON格式无效，无法格式化: ' + e.message);
+            editor.classList.add('is-invalid');
+            document.getElementById('jsonError').textContent = e.message;
+        }
+    }
+
+    // 静默格式化JSON（不显示提示）
+    function formatJSONSilent() {
+        const editor = document.getElementById('agentConfigEditor');
+        const originalValue = editor.value.trim();
+        
+        if (!originalValue) {
+            editor.value = '{}';
+            return;
+        }
+        
+        try {
+            // 尝试解析JSON
+            const obj = JSON.parse(originalValue);
+            
+            // 使用2个空格缩进格式化
+            const formatted = JSON.stringify(obj, null, 2);
+            editor.value = formatted;
+            
+            // 清除错误状态
+            editor.classList.remove('is-invalid');
+            document.getElementById('jsonError').textContent = '';
+        } catch (e) {
+            // 静默处理错误，不显示提示
+            console.warn('JSON格式化失败:', e.message);
+        }
+    }
+
+    // 验证JSON（只在错误时显示提示）
+    function validateJSON() {
+        const editor = document.getElementById('agentConfigEditor');
+        try {
+            JSON.parse(editor.value);
+            // 不显示成功提示，静默处理
+            editor.classList.remove('is-invalid');
+            document.getElementById('jsonError').textContent = '';
+        } catch (e) {
+            showError('JSON格式错误: ' + e.message);
+            editor.classList.add('is-invalid');
+            document.getElementById('jsonError').textContent = e.message;
+        }
+    }
+
+    // 静默验证JSON（不显示提示）
+    function validateJSONSilent() {
+        const editor = document.getElementById('agentConfigEditor');
+        try {
+            JSON.parse(editor.value);
+            editor.classList.remove('is-invalid');
+            document.getElementById('jsonError').textContent = '';
+        } catch (e) {
+            editor.classList.add('is-invalid');
+            document.getElementById('jsonError').textContent = e.message;
+        }
+    }
+
+    // 格式化记忆数据JSON（只在错误时显示提示）
+    function formatMemoryJSON() {
+        const editor = document.getElementById('memoryDataEditor');
+        const originalValue = editor.value.trim();
+        
+        if (!originalValue) {
+            editor.value = '{}';
+            return;
+        }
+        
+        try {
+            // 尝试解析JSON
+            const obj = JSON.parse(originalValue);
+            
+            // 使用2个空格缩进格式化
+            const formatted = JSON.stringify(obj, null, 2);
+            editor.value = formatted;
+            
+            // 清除错误状态
+            editor.classList.remove('is-invalid');
+            document.getElementById('memoryJsonError').textContent = '';
+            
+        } catch (e) {
+            showError('JSON格式无效，无法格式化: ' + e.message);
+            editor.classList.add('is-invalid');
+            document.getElementById('memoryJsonError').textContent = e.message;
+        }
+    }
+
+    // 静默格式化记忆数据JSON（不显示提示）
+    function formatMemoryJSONSilent() {
+        const editor = document.getElementById('memoryDataEditor');
+        const originalValue = editor.value.trim();
+        
+        if (!originalValue) {
+            editor.value = '{}';
+            return;
+        }
+        
+        try {
+            // 尝试解析JSON
+            const obj = JSON.parse(originalValue);
+            
+            // 使用2个空格缩进格式化
+            const formatted = JSON.stringify(obj, null, 2);
+            editor.value = formatted;
+            
+            // 清除错误状态
+            editor.classList.remove('is-invalid');
+            document.getElementById('memoryJsonError').textContent = '';
+        } catch (e) {
+            // 静默处理错误，不显示提示
+            console.warn('记忆数据JSON格式化失败:', e.message);
+        }
+    }
+
+    // 验证记忆数据JSON（只在错误时显示提示）
+    function validateMemoryJSON() {
+        const editor = document.getElementById('memoryDataEditor');
+        try {
+            JSON.parse(editor.value);
+            editor.classList.remove('is-invalid');
+            document.getElementById('memoryJsonError').textContent = '';
+        } catch (e) {
+            showError('JSON格式错误: ' + e.message);
+            editor.classList.add('is-invalid');
+            document.getElementById('memoryJsonError').textContent = e.message;
+        }
+    }
+
+    // 静默验证记忆数据JSON（不显示提示）
+    function validateMemoryJSONSilent() {
+        const editor = document.getElementById('memoryDataEditor');
+        try {
+            JSON.parse(editor.value);
+            editor.classList.remove('is-invalid');
+            document.getElementById('memoryJsonError').textContent = '';
+        } catch (e) {
+            editor.classList.add('is-invalid');
+            document.getElementById('memoryJsonError').textContent = e.message;
+        }
+    }
+
+    // 保存配置
+    async function saveConfig() {
+        const editor = document.getElementById('agentConfigEditor');
+        const memoryEditor = document.getElementById('memoryDataEditor');
+        const configText = editor.value.trim();
+        const memoryText = memoryEditor.value.trim();
+        const agentName = document.getElementById('modalAgentName').value.trim();
+        
+        // 验证Agent名称
+        if (!agentName) {
+            showError('Agent名称不能为空');
+            document.getElementById('modalAgentName').classList.add('is-invalid');
+            return;
+        }
+        
+        // 验证JSON格式
+        try {
+            const configJson = JSON.parse(configText);
+            const memoryJson = JSON.parse(memoryText);
+            
+            // 同时更新Agent名称、配置和记忆数据
+            const promises = [];
+            
+            // 更新Agent名称
+            promises.push(
+                fetch(`/admin/api/agents/${currentAgentId}/basic-info`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: agentName
+                    })
+                })
+            );
+            
+            // 更新Agent配置
+            promises.push(
+                fetch(`/admin/api/agents/${currentAgentId}/config`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        agent_config: configJson
+                    })
+                })
+            );
+            
+            // 更新记忆数据
+            promises.push(
+                fetch(`/admin/api/agents/${currentAgentId}/memory-data`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        memory_data: memoryJson
+                    })
+                })
+            );
+            
+            // 等待所有请求完成
+            const responses = await Promise.all(promises);
+            const results = await Promise.all(responses.map(r => r.json()));
+            
+            // 检查是否有错误
+            const errors = results.filter(r => !r.success);
+            if (errors.length > 0) {
+                showError('保存失败: ' + errors[0].error);
+                return;
+            }
+            
+            showSuccess('配置、记忆数据和名称保存成功');
+            bootstrap.Modal.getInstance(document.getElementById('configModal')).hide();
+            loadAgents(); // 刷新列表
+            
+        } catch (e) {
+            showError('JSON格式错误: ' + e.message);
+            // 判断是哪个编辑器出错
+            try {
+                JSON.parse(configText);
+            } catch (configError) {
+                editor.classList.add('is-invalid');
+                document.getElementById('jsonError').textContent = configError.message;
+            }
+            
+            try {
+                JSON.parse(memoryText);
+            } catch (memoryError) {
+                memoryEditor.classList.add('is-invalid');
+                document.getElementById('memoryJsonError').textContent = memoryError.message;
+            }
+        }
+    }
+
+    // 重置搜索
+    function resetSearch() {
+        document.getElementById('searchName').value = '';
+        document.getElementById('searchUser').value = '';
+        document.getElementById('searchDevice').value = '';
+        document.getElementById('searchStatus').value = '';
+        applySearchFilter();
+    }
+
+    // 显示加载状态
+    function showLoading() {
+        const tbody = document.getElementById('agentsTable');
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center"><div class="loading"><div class="spinner-border" role="status"></div><div class="mt-2">加载中...</div></div></td></tr>';
+    }
+
+    // 隐藏加载状态
+    function hideLoading() {
+        // 加载状态会在updateAgentsTable中被替换
+    }
+
+    // 显示成功消息
+    function showSuccess(message) {
+        // 简单的成功提示，可以后续优化为Toast
+        alert('✅ ' + message);
+    }
+
+    // 显示错误消息
+    function showError(message) {
+        // 简单的错误提示，可以后续优化为Toast
+        alert('❌ ' + message);
+    }
+
+    // 设置JSON编辑器增强功能
+    function setupJSONEditor() {
+        const editor = document.getElementById('agentConfigEditor');
+        if (!editor) return;
+
+        // 支持Tab键缩进
+        editor.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                
+                // 插入2个空格
+                this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 2;
+            }
+        });
+
+        // 自动缩进支持
+        editor.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const value = this.value;
+                
+                // 获取当前行的缩进
+                const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+                const currentLine = value.substring(lineStart, start);
+                const indent = currentLine.match(/^\s*/)[0];
+                
+                // 如果当前行以{或[结尾，增加缩进
+                let newIndent = indent;
+                if (currentLine.trim().endsWith('{') || currentLine.trim().endsWith('[')) {
+                    newIndent += '  ';
+                }
+                
+                // 插入换行和缩进
+                this.value = value.substring(0, start) + '\n' + newIndent + value.substring(start);
+                this.selectionStart = this.selectionEnd = start + 1 + newIndent.length;
+            }
+        });
+
+        // 自动闭合括号
+        editor.addEventListener('keydown', function(e) {
+            if (e.key === '{') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                this.value = this.value.substring(0, start) + '{\n  \n}' + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 3;
+            } else if (e.key === '[') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                this.value = this.value.substring(0, start) + '[\n  \n]' + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 3;
+            }
+        });
+
+        // 实时验证（静默模式）
+        let validationTimeout;
+        editor.addEventListener('input', function() {
+            clearTimeout(validationTimeout);
+            validationTimeout = setTimeout(() => {
+                validateJSONSilent();
+            }, 1000);
+        });
+    }
+
+    // 设置记忆数据JSON编辑器增强功能
+    function setupMemoryJSONEditor() {
+        const editor = document.getElementById('memoryDataEditor');
+        if (!editor) return;
+
+        // 支持Tab键缩进
+        editor.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                
+                // 插入2个空格
+                this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 2;
+            }
+        });
+
+        // 自动缩进支持
+        editor.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const value = this.value;
+                
+                // 获取当前行的缩进
+                const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+                const currentLine = value.substring(lineStart, start);
+                const indent = currentLine.match(/^\s*/)[0];
+                
+                // 如果当前行以{或[结尾，增加缩进
+                let newIndent = indent;
+                if (currentLine.trim().endsWith('{') || currentLine.trim().endsWith('[')) {
+                    newIndent += '  ';
+                }
+                
+                // 插入换行和缩进
+                this.value = value.substring(0, start) + '\n' + newIndent + value.substring(start);
+                this.selectionStart = this.selectionEnd = start + 1 + newIndent.length;
+            }
+        });
+
+        // 自动闭合括号
+        editor.addEventListener('keydown', function(e) {
+            if (e.key === '{') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                this.value = this.value.substring(0, start) + '{\n  \n}' + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 3;
+            } else if (e.key === '[') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                this.value = this.value.substring(0, start) + '[\n  \n]' + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 3;
+            }
+        });
+
+        // 实时验证（静默模式）
+        let validationTimeout;
+        editor.addEventListener('input', function() {
+            clearTimeout(validationTimeout);
+            validationTimeout = setTimeout(() => {
+                validateMemoryJSONSilent();
+            }, 1000);
+        });
+    }
+
+    // 加载用户列表
+    async function loadUsers() {
+        try {
+            const response = await fetch('/admin/api/users');
+            const result = await response.json();
+            
+            if (result.success) {
+                allUsers = result.data;
+            } else {
+                console.error('加载用户列表失败:', result.error);
+            }
+        } catch (error) {
+            console.error('加载用户列表失败:', error);
+        }
+    }
+
+    // 显示迁移模态框
+    function showTransferModal(agentId, agentName, currentUser, deviceUuid, deviceName) {
+        transferAgentId = agentId;
+        
+        // 填充Agent信息
+        document.getElementById('transferAgentId').textContent = agentId;
+        document.getElementById('transferAgentName').textContent = agentName;
+        document.getElementById('transferCurrentUser').textContent = currentUser;
+        document.getElementById('transferDeviceUuid').textContent = deviceUuid;
+        document.getElementById('transferDeviceName').textContent = deviceName;
+        
+        // 填充用户选择下拉框
+        const userSelect = document.getElementById('transferTargetUser');
+        userSelect.innerHTML = '<option value="">请选择目标用户...</option>';
+        
+        allUsers.forEach(user => {
+            if (user.status === 1) { // 只显示正常状态的用户
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = `${user.user_name} (${user.login_name})`;
+                userSelect.appendChild(option);
+            }
+        });
+        
+        // 清空说明
+        document.getElementById('transferNote').value = '';
+        
+        // 显示模态框
+        const modal = new bootstrap.Modal(document.getElementById('transferModal'));
+        modal.show();
+    }
+
+    // 确认迁移
+    async function confirmTransfer() {
+        const targetUserId = document.getElementById('transferTargetUser').value;
+        const note = document.getElementById('transferNote').value;
+        
+        if (!targetUserId) {
+            showError('请选择目标用户');
+            return;
+        }
+        
+        // 确认对话框
+        if (!confirm('确定要将此Agent迁移给目标用户吗？此操作不可撤销！')) {
+            return;
+        }
+        
+        try {
+            // 禁用按钮防止重复提交
+            const confirmBtn = document.getElementById('transferConfirmBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>迁移中...';
+            
+            const response = await fetch(`/admin/api/agents/${transferAgentId}/transfer`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    target_user_id: parseInt(targetUserId)
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showSuccess(`Agent迁移成功！已迁移给用户ID: ${targetUserId}`);
+                bootstrap.Modal.getInstance(document.getElementById('transferModal')).hide();
+                loadAgents(); // 刷新列表
+            } else {
+                showError('迁移失败: ' + result.error);
+            }
+        } catch (error) {
+            console.error('迁移失败:', error);
+            showError('迁移失败，请重试');
+        } finally {
+            // 恢复按钮状态
+            const confirmBtn = document.getElementById('transferConfirmBtn');
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<i class="fas fa-exchange-alt me-2"></i>确认迁移';
+        }
+    }
+</script>
+{% endblock %}

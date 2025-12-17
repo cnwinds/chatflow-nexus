@@ -99,6 +99,39 @@ def create_default_token_estimator() -> callable:
     return estimate_tokens
 
 
+def _extract_usage_info(usage: Any) -> Optional[Dict[str, int]]:
+    """
+    从 usage 对象或字典中提取使用信息
+    
+    Args:
+        usage: usage 对象或字典
+        
+    Returns:
+        包含 prompt_tokens, completion_tokens, total_tokens 的字典，如果无法提取则返回 None
+    """
+    if not usage:
+        return None
+    
+    try:
+        # 如果是字典
+        if isinstance(usage, dict):
+            return {
+                "prompt_tokens": usage.get("prompt_tokens", 0),
+                "completion_tokens": usage.get("completion_tokens", 0),
+                "total_tokens": usage.get("total_tokens", 0)
+            }
+        # 如果是对象（有属性）
+        else:
+            return {
+                "prompt_tokens": getattr(usage, "prompt_tokens", 0),
+                "completion_tokens": getattr(usage, "completion_tokens", 0),
+                "total_tokens": getattr(usage, "total_tokens", 0)
+            }
+    except Exception as e:
+        logger.warning(f"提取 usage 信息失败: {e}")
+        return None
+
+
 async def process_openai_stream(
     stream: AsyncIterator[ChatCompletionChunk],
     resolved_model: str,
@@ -126,6 +159,7 @@ async def process_openai_stream(
         - "error": 错误信息
     """
     full_content = ""
+    full_thinking = ""  # 累积 thinking 内容
     tool_calls = []
     usage_info = None
     
@@ -134,11 +168,9 @@ async def process_openai_stream(
             if not chunk.choices or not chunk.choices[0].delta:
                 # 处理使用信息（可能在任何chunk中）
                 if hasattr(chunk, 'usage') and chunk.usage:
-                    usage_info = {
-                        "prompt_tokens": chunk.usage.prompt_tokens,
-                        "completion_tokens": chunk.usage.completion_tokens,
-                        "total_tokens": chunk.usage.total_tokens
-                    }
+                    extracted_usage = _extract_usage_info(chunk.usage)
+                    if extracted_usage:
+                        usage_info = extracted_usage
                 continue
             
             delta = chunk.choices[0].delta
@@ -148,6 +180,13 @@ async def process_openai_stream(
                 "used_model": resolved_model,
                 "request_model": request_model
             }
+            
+            # 处理 thinking 增量（智谱AI等服务的思维链输出）
+            if hasattr(delta, 'thinking') and delta.thinking:
+                thinking_chunk = delta.thinking
+                full_thinking += thinking_chunk
+                chunk_data["delta"]["thinking"] = thinking_chunk
+                chunk_data["full_thinking"] = full_thinking
             
             # 处理内容增量
             if delta.content:
@@ -193,11 +232,9 @@ async def process_openai_stream(
             
             # 处理使用信息（可能在任何chunk中）
             if hasattr(chunk, 'usage') and chunk.usage:
-                usage_info = {
-                    "prompt_tokens": chunk.usage.prompt_tokens,
-                    "completion_tokens": chunk.usage.completion_tokens,
-                    "total_tokens": chunk.usage.total_tokens
-                }
+                extracted_usage = _extract_usage_info(chunk.usage)
+                if extracted_usage:
+                    usage_info = extracted_usage
             
             # 只有当有实际内容时才yield
             if chunk_data["delta"]:
@@ -224,7 +261,7 @@ async def process_openai_stream(
                 logger.warning(f"Token估算失败: {e}")
         
         # 发送最终完成信息
-        yield {
+        completion_data = {
             "type": "completion",
             "content": full_content,
             "tool_calls": tool_calls if tool_calls else None,
@@ -232,6 +269,12 @@ async def process_openai_stream(
             "used_model": resolved_model,
             "request_model": request_model
         }
+        
+        # 如果有 thinking 内容，添加到完成信息中
+        if full_thinking:
+            completion_data["thinking"] = full_thinking
+        
+        yield completion_data
         
     except Exception as e:
         logger.error(f"流式响应处理错误: {e}")

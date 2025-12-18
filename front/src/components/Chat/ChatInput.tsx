@@ -209,15 +209,15 @@ export default function ChatInput() {
       <div className="p-4">
         <div className="flex items-center space-x-3">
           {/* 文本输入框 */}
-          <div className="flex-1 relative">
+          <div className="flex-1 relative self-center">
             <textarea
               ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={isRecording ? "正在录音，您也可以继续输入文字..." : "输入消息... (Ctrl+Enter发送)"}
-              className="w-full resize-none border border-border-primary rounded-xl px-4 py-3 pr-12 bg-bg-primary text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-accent-primary transition-all min-h-[52px] max-h-[200px] overflow-y-auto"
-              rows={1}
+              className="w-full resize-none border border-border-primary rounded-xl px-4 py-3 pr-12 bg-bg-primary text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-accent-primary transition-all min-h-[72px] max-h-[200px] overflow-y-auto leading-[1.5]"
+              rows={2}
               disabled={loading}
             />
             {/* 输入框内的快捷提示 */}
@@ -264,25 +264,6 @@ export default function ChatInput() {
               )}
             </button>
           </div>
-        </div>
-
-        {/* 底部提示信息 */}
-        <div className="mt-2 flex items-center justify-between text-xs">
-          <div className="flex items-center space-x-4 text-text-tertiary">
-            {isSupported ? (
-              <span className="flex items-center space-x-1">
-                <MicrophoneIcon className="w-3 h-3" />
-                <span>支持语音输入</span>
-              </span>
-            ) : (
-              <span className="text-text-tertiary">您的浏览器不支持语音输入</span>
-            )}
-          </div>
-          {input && (
-            <span className="text-text-tertiary">
-              {input.length} 字符
-            </span>
-          )}
         </div>
       </div>
     </div>
